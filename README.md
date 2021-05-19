@@ -1,4 +1,4 @@
-# Spatial-Temporal-Trajectory-Prediction-for-Traffic-Agents
+# Spatial Temporal Trajectory Prediction for Traffic Agents
 
 As the world shifts from using robotics in tightly controlled and predictable spaces to using robotics in highly dynamic and unpredictable spaces, it is becoming increasingly apparent that such systems will be required to make decisions of their own. In the realm of self-driving vehicles, this capacity --- or the lack thereof --- is quite literally a matter of life and death. 
 
