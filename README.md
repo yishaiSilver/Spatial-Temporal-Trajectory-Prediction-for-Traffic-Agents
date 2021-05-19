@@ -1,0 +1,5 @@
+# Spatial-Temporal-Trajectory-Prediction-for-Traffic-Agents
+
+As the world shifts from using robotics in tightly controlled and predictable spaces to using robotics in highly dynamic and unpredictable spaces, it is becoming increasingly apparent that such systems will be required to make decisions of their own. In the realm of self-driving vehicles, this capacity --- or the lack thereof --- is quite literally a matter of life and death. 
+
+One fundamental component in the decision-making process is the understanding and extrapolation of information within the relevant problem's context. In the space of autonomous vehicles, this entails being aware of an environment's state (both past and present) as well as being able to predict the future states of that environment. I entail to do just that within this project. More specifically, I intend on predicting an agent's trajectory over the course of 3 seconds after having encountered 2 seconds of data, where an agent is defined as being a car, a cyclist, a pedestrian, etc.
