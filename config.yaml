@@ -2,10 +2,13 @@
 data:
   train_path: ./data/train
   val_path: ./data/val_in
-  batch_size: 4
+  batch_size: 1
   shuffle: true
   num_workers: 4
   transforms:
-    - transform1
-    - transform3
+    - AgentCenter
+  collate:
+    - p_in
+    # - v_in
+    # - lane
 
