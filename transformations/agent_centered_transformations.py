@@ -27,6 +27,8 @@ class AgentCenter:
         self.input_offsets = None
         self.output_offsets = None
 
+        self.prior_prediction_correction = None
+
         return
 
     def homogenize_matrix(self, matrix):
@@ -198,36 +200,36 @@ class AgentCenter:
         # save the scene offsets to invert the transformation
         datum["offsets"] = offsets
 
-        # we want to save the offsets to invert the transformation as well as
-        # update the lane positions
+        # Adding offsets as the output key
+        datum["labels"] = offsets
+
+        # save the prior correction
+        self.prior_prediction_correction = datum["prediction_correction"]
+
+        # update the prediction correction
+        datum["prediction_correction"] = self.prediction_correction
 
         return datum
 
-    def invert(self, datum):
-        """
-        TODO: implement lol
-        Inverts the position inputs and outputs in the datum by removing the
-        offsets.
+    def prediction_correction(self, batch_predictions, batch_labels):
+        """TODO: correct_predictions"""
 
-        Args:
-            datum (dict): Dictionary representing a single data point.
+        # IMPORTANT: inputs are batched
 
-        Returns:
-            dict: Updated datum with inverted position inputs and outputs.
-        """
-        # get the input and output data
-        position_inputs = datum["p_in"]
-        position_outputs = datum["p_out"]
+        # NOTE: Since we have only moved the positions, we can just leave them
+        # as is for training, but we'll need to revert them back to the original
+        # positions when we test against the dataset.
 
-        # get the mask
-        agent_mask = datum["car_mask"]
+        # convert displacements to positions by using cumsum
+        predictions = np.cumsum(batch_predictions, axis=1)
 
-        # remove the offset iff the agent is present
-        position_inputs[agent_mask] -= self.input_offsets
-        position_outputs[agent_mask] -= self.output_offsets
+        # convert labels to positions by using cumsum
+        label_positions = np.cumsum(batch_labels, axis=1)
 
-        # update the positions in the datum
-        datum["p_in"] = position_inputs
-        datum["p_out"] = position_outputs
+        # apply corrections needed by other transformations.
+        if self.prior_prediction_correction is not None:
+            return self.prior_prediction_correction(
+                predictions, label_positions
+            )
 
-        return datum
+        return predictions, label_positions

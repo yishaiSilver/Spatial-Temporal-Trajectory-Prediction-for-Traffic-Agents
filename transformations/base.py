@@ -9,10 +9,14 @@ class BaseTransformation():
         """ init """
         return
 
-    def apply(self, batch_data):
+    def apply(self, datum):
         """ apply """
-        return batch_data
 
-    def invert(self, batch_data):
-        """ invert """
-        return batch_data
+        datum["labels"] = datum["p_out"]
+        datum["prediction_correction"] = None
+
+        return datum
+
+    def prediction_correction(self, predictions, labels):
+        """ prediction_correction """
+        return predictions, labels

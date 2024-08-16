@@ -2,9 +2,9 @@
 data:
   train_path: ./data/train
   val_path: ./data/val_in
-  batch_size: 1
+  batch_size: 8
   shuffle: true
-  num_workers: 4
+  num_workers: 8
   transforms:
     - AgentCenter
   collate:

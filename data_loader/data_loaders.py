@@ -8,7 +8,8 @@ from glob import glob
 
 from data_loader.collate import Collate
 from transformations.agent_centered_transformations import AgentCenter
-from transformations.positions_to_displacements import PositionToDisplacement
+from transformations.base import BaseTransformation
+# from transformations.positions_to_displacements import PositionToDisplacement
 
 # number of sequences in each dataset
 # train:205942  val:3200 test: 36272
@@ -54,18 +55,20 @@ def create_data_loader(config, train=True, examine=False):
     batch_size = config["batch_size"]
     num_workers = config["num_workers"]
 
-    # TODO: implement transform_fn
+    transforms = config["transforms"]
     def transform_fn(x):
+        tf = BaseTransformation()
+        x = tf.apply(x)
+
+        if "AgentCenter" in transforms:
+            tf = AgentCenter()
+            x = tf.apply(x)
+            
         return x
 
-    # tf = PositionToDisplacement()
-
-    tf = AgentCenter()
-    transform_fn = tf.apply
-
-    # transform_fn = tf.apply
     
-    collate_fn = Collate(config["collate"]).apply
+    collate = Collate(config["collate"])
+    collate_fn = collate.apply
 
     if examine:
         def noop(x):

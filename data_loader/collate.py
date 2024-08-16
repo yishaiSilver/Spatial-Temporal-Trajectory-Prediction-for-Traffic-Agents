@@ -40,25 +40,10 @@ class Collate():
         desired_data = desired_data.squeeze(0)
 
         # chosen output data
-        output_np = np.array([datum["p_out"] for datum in batch_data])
+        output_np = np.array([datum["labels"] for datum in batch_data])
         output_tensor = torch.tensor(output_np)
 
-        return desired_data, output_tensor
+        # get the prediction correction
+        prediction_correction = [datum["prediction_correction"] for datum in batch_data]
 
-    # TODO: implement
-    # def invert(self, batch_data):
-    #     """
-    #     TODO: implement
-    #     Inverts the collate transformation in the batch data.
-
-    #     Args:
-    #         Tensor: List of dictionaries representing the batch data.
-
-    #     Returns:
-    #         list(dict): Convert a tensor to a batch of data
-    #     """
-        
-    #     # convert the tensor back to a batch of data
-    #     batch_data = batch_data.tolist()
-
-    #     return
+        return desired_data, output_tensor, prediction_correction

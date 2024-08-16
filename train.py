@@ -46,15 +46,16 @@ def train_epoch(model, optimizer, loss_fn, data_loader):
     losses = []
     iterator = tqdm.tqdm(data_loader, total=int(len(data_loader)))
 
-    print(len(iterator))
     for batch_data in iterator:
-        inputs, labels = batch_data
+        inputs, labels, prediction_correction = batch_data
 
         optimizer.zero_grad()
 
-        outputs = model(inputs)
+        predictions = model(inputs)
 
-        loss = loss_fn(outputs, labels)
+        predictions, labels = prediction_correction(predictions, labels)
+
+        loss = loss_fn(predictions, labels)
 
         loss.backward()
 
