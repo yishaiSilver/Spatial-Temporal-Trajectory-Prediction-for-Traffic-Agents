@@ -5,7 +5,8 @@ import numpy as np
 
 TIMESTAMP_DIM = 2
 
-class PositionToDisplacement():
+
+class PositionToDisplacement:
     """
     Applies agent-centered transformation to the given batch_data.
 
@@ -22,7 +23,7 @@ class PositionToDisplacement():
         return
 
     def apply(self, datum):
-        """ apply """
+        """apply"""
 
         # get the input and output data
         position_inputs = np.array([datum["p_in"]])
@@ -33,9 +34,9 @@ class PositionToDisplacement():
         num_input_timestamps = position_inputs.shape[TIMESTAMP_DIM]
 
         # concatenate the input and output
-        all_positions = np.concatenate((position_inputs,
-                                        position_outputs),
-                                        axis=TIMESTAMP_DIM)
+        all_positions = np.concatenate(
+            (position_inputs, position_outputs), axis=TIMESTAMP_DIM
+        )
 
         # calculate the displacement
         displacement = np.diff(all_positions, axis=TIMESTAMP_DIM)
@@ -51,7 +52,7 @@ class PositionToDisplacement():
         return datum
 
     def invert(self, datum):
-        """ invert """
+        """invert"""
 
         # get the input and output data
         displacement_inputs = np.array([datum["p_in"]])
@@ -61,9 +62,9 @@ class PositionToDisplacement():
         num_input_timestamps = displacement_inputs.shape[TIMESTAMP_DIM]
 
         # concatenate the input and output
-        all_displacements = np.concatenate((displacement_inputs,
-                                            displacement_outputs),
-                                            axis=TIMESTAMP_DIM)
+        all_displacements = np.concatenate(
+            (displacement_inputs, displacement_outputs), axis=TIMESTAMP_DIM
+        )
 
         # calculate the displacement
         positions = np.cumsum(all_displacements, axis=TIMESTAMP_DIM)

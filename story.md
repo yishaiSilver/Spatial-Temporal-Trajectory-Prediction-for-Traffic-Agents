@@ -5,7 +5,7 @@ For starters, let's create an animation consisting of the most basic information
 - Lanes (constructed from their positions and norms) 
 - Agent positions and velocities (represented as points and arrows, respectively).
 
-![A gif showing an animated scene](animation.gif)
+![A gif showing an animated scene](visualize/images/simple_animation.gif)
 
 At this level, certain details emerge: 
 - What the heck is our coordinate frame? Why are our points plotted between such weird ranges
@@ -14,7 +14,6 @@ At this level, certain details emerge:
     - The red agent waits for the olive agent to pass before performing a right-turn onto the main road.
     - The olive agent changes lanes to overcome towards the left right as the input data stops and the output data begins.
 - The velocities are rather noisy; if we look at the bottom three agents, their velocity go all over the place despite them staying relatively still. If we are going to use velocity at all, we may need to filter it in some way.
-- Some intents aren't apparent from the data. For example, the red agent could just as well have turned left instead of right, but we have no way of knowing that from the input data alone. I.e. we cheat by using the output data to determine the intent of the agent, but this will not be available at the time of inference.
 
 Let's try to discover the coordinate frame by plotting all of the values of p_in on a single plot:
 
@@ -24,9 +23,22 @@ We get two cities, which must be why there is the `city` field for each scene. M
 - *Driving with a GPS zoomed all the way out* 
 - *Driving while oriented towards north* 
 
-Maybe someone could do these things, but it's not practical and it doesn't make sense for us to impose these limitations on our network. Instead, let's put the world relative to us.
+Maybe someone could do these things, but it's not practical, we don't do that,  and it doesn't make sense for us to impose these limitations on our network. Instead, let's put the world relative to us.
 
-## Let's
+### Position
+We can do this by transforming the positions of the agents to be relative to the ego agent. This is done by subtracting the ego agent's position from all of the other agents' positions.
 
-Let's first examine the data as a whole. We can start with plotting all of the input positions (the positions being fed into our model) as a whole to see what sort of distribution we get:
+### Orientation
 
+Notes:
+- Due to the erratic velocity we saw earlier, we aren't going to rely on it for orientation, even though conceptually that's an extremely strong option. 
+- Even the positions are somewhat noisy, so without filtering, we might get a noisy orientation.
+- We can use the closest lane, but this may fail in the case of intersections (If you look at the olive agent, we can see that his orientation would be quite erratic, especially due to his lane change).
+- Perhaps we can use something like a kalman filter?
+
+In light of all of this, we'll start with orienting the agents based on the angle between the beginning input position and the ending input position. This is a very naive approach, but it's a start and it'll give stable results. Furthermore, it'll make the network's job easier by providing a stable orientation (we only have to worry about the positional change of the ego agent). It also makes it easier to update lanes, since we only have to rotate them once.
+
+
+![A gif showing an animated scene](visualize/images/translated_to_agent.gif)
+
+The data is now much more intuitive. Asides from the static angle, we can see that this is not too different from how we might percieve the world while driving.  

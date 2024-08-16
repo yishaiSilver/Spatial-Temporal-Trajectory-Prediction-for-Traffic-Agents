@@ -1,5 +1,6 @@
 
 *.pkl
+*.pyc
 *.pth
 cse151b-spring.zip
 *.csv

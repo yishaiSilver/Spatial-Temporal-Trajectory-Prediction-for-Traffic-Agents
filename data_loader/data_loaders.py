@@ -7,6 +7,7 @@ import pickle
 from glob import glob
 
 from data_loader.collate import Collate
+from transformations.agent_centered_transformations import AgentCenter
 from transformations.positions_to_displacements import PositionToDisplacement
 
 # number of sequences in each dataset
@@ -58,6 +59,9 @@ def create_data_loader(config, train=True, examine=False):
         return x
 
     # tf = PositionToDisplacement()
+
+    tf = AgentCenter()
+    transform_fn = tf.apply
 
     # transform_fn = tf.apply
     
