@@ -1,16 +1,14 @@
 import torch
 import numpy as np
 
-class Collate():
+
+class Collate:
     """
     collate class (convert batch -> input tensors)
     """
 
-    def __init__(self, collate_keys: list[str]):
-        """ init """
-
-        self.keys = collate_keys
-
+    def __init__(self):
+        """init"""
         return
 
     def apply(self, batch_data):
@@ -24,26 +22,32 @@ class Collate():
             Tensor: Transformed batch data, ready for input to the model.
         """
 
-        # aggregate what we want
-        desired_input_data = []
+        batch_inputs = []
+        batch_labels = []
+        batch_prediction_correction = []
+        batch_correction_metadata = []
 
-        # get the desired keys (converted to tensors)
-        for key in self.keys:
-            np_array = np.array([datum[key] for datum in batch_data])
-            tensors = torch.tensor(np_array)
-            desired_input_data.append(tensors)
+        for datum in batch_data:
+            model_input, label, prediction_correction, metadata = datum
 
-        # combine the tensors
-        desired_data = torch.stack(desired_input_data)
-        
-        # remove the first dimension
-        desired_data = desired_data.squeeze(0)
+            batch_inputs.append(model_input)
+            batch_labels.append(label)
+            batch_prediction_correction.append(prediction_correction)
+            batch_correction_metadata.append(metadata)
 
-        # chosen output data
-        output_np = np.array([datum["labels"] for datum in batch_data])
-        output_tensor = torch.tensor(output_np)
+        # print(batch_inputs)
 
-        # get the prediction correction
-        prediction_correction = [datum["prediction_correction"] for datum in batch_data]
+        inputs = np.array(batch_inputs)
+        labels = np.array(batch_labels)
+    
+        # we only need one function reference because all data should have 
+        # the same correction function
+        prediction_correction = batch_prediction_correction[0]
 
-        return desired_data, output_tensor, prediction_correction
+        # convert all inputs to tensors
+        inputs = tuple(torch.tensor(inputs, dtype=torch.float32))
+
+        # convert all labels to tensors
+        labels = torch.tensor(labels, dtype=torch.float32)
+
+        return inputs, labels, prediction_correction, batch_correction_metadata

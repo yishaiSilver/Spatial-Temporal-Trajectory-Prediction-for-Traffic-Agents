@@ -69,6 +69,7 @@ class AgentCenter:
             dict: Transformed datum with updated positions.
         """
         # get all of the ids for the agents being tracked
+        # renaming due to bad naming in the dataset
         agent_ids = datum["track_id"]
 
         # extract the agent_id from the datum
@@ -211,7 +212,7 @@ class AgentCenter:
 
         return datum
 
-    def prediction_correction(self, batch_predictions, batch_labels):
+    def prediction_correction(self, batch_predictions, batch_metadata):
         """TODO: correct_predictions"""
 
         # IMPORTANT: inputs are batched
@@ -220,16 +221,13 @@ class AgentCenter:
         # as is for training, but we'll need to revert them back to the original
         # positions when we test against the dataset.
 
+        # Really, this should convert all the way back to the original, global
+        # positions, but that's a bit more effor. Leaving it as a TODO for now.
+        # thought: embed metadata in the data to know how to invert it:
+        # input, output, prediction_correction, batch_correction_metadata.
+
         # convert displacements to positions by using cumsum
         predictions = np.cumsum(batch_predictions, axis=1)
 
-        # convert labels to positions by using cumsum
-        label_positions = np.cumsum(batch_labels, axis=1)
-
         # apply corrections needed by other transformations.
-        if self.prior_prediction_correction is not None:
-            return self.prior_prediction_correction(
-                predictions, label_positions
-            )
-
-        return predictions, label_positions
+        return self.prior_prediction_correction(predictions, batch_metadata)

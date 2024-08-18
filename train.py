@@ -19,14 +19,15 @@ import data_loader.data_loaders as data
 # import model.loss as module_loss
 # import model.metric as module_metric
 
-import model.model as model_arch  # tod: don't like name
+
+from models.a_simple_mlp import SimpleMLP
 
 # from trainer import Trainer
 # from utils import prepare_device
 import yaml
 import tqdm
 
-COUNT_MOVING_AVERAGE = 10
+COUNT_MOVING_AVERAGE = 100
 
 def train_epoch(model, optimizer, loss_fn, data_loader):
     """
@@ -47,13 +48,13 @@ def train_epoch(model, optimizer, loss_fn, data_loader):
     iterator = tqdm.tqdm(data_loader, total=int(len(data_loader)))
 
     for batch_data in iterator:
-        inputs, labels, prediction_correction = batch_data
+        inputs, labels, prediction_correction, metadata = batch_data
 
         optimizer.zero_grad()
 
         predictions = model(inputs)
 
-        predictions, labels = prediction_correction(predictions, labels)
+        predictions = prediction_correction(predictions, labels)
 
         loss = loss_fn(predictions, labels)
 
@@ -102,49 +103,55 @@ def main(main_config):
     Train the spatiotemporal trajectory prediction model for traffic agents.
 
     Args:
-        config (dict): Configuration dictionary containing model, optimizer, loss, data, and num_epochs.
+        config (dict): Configuration dictionary containing model, optimizer, 
+            loss, data, and num_epochs.
 
     Returns:
         None
     """
 
+    # get the configs
+    data_config = main_config["data"]
+    model_config = main_config['model']
+
+
+    # get the data
+    train_loader = data.create_data_loader(model_config, data_config, train=True)
+    # val_loader = data.create_data_loader(model_config, data_config, train=False)
+
     # Rest of the code...
     # get the model
-    # model_config = main_config['model']
-    model = model_arch.RNN()  # tod: magic line (sort of)
+    model = SimpleMLP(model_config, data_config) # TODO: magic line (sort of)
+                                                 # switch to config file spec.
 
     # get the optimizer
     # optimizer_config = main_config['optimizer']
     optimizer = torch.optim.SGD(
-        model.parameters(), lr=0.001, momentum=0.9
+        model.parameters(), lr=0.01, momentum=0.1, weight_decay=0.01
     )  # tod: magic line
 
     # get the loss
     # loss_config = main_config['loss']
     loss_fn = nn.MSELoss()  # tod: magic line
 
-    # get the data
-    data_config = main_config["data"]
-    train_loader = data.create_data_loader(data_config, train=True)
-    val_loader = data.create_data_loader(data_config, train=False)
 
     # get the number of epochs:
     # num_epochs = main_config['num_epochs']
-    num_epochs = 3
+    num_epochs = 1
 
     best_val_loss = np.inf
     for epoch in range(num_epochs):
         print(f"EPOCH {epoch}:")
 
         train_epoch(model, optimizer, loss_fn, train_loader)
-        validation_loss = validate_epoch(model, loss_fn, val_loader)
+        # validation_loss = validate_epoch(model, loss_fn, val_loader)
 
-        # save the model if it's the best
-        if validation_loss < best_val_loss:
-            print(f"Best Validation loss: {validation_loss}")
-            best_val_loss = validation_loss
-            model_path = "model"
-            torch.save(model.state_dict(), model_path)
+        # # save the model if it's the best
+        # if validation_loss < best_val_loss:
+        #     print(f"Best Validation loss: {validation_loss}")
+        #     best_val_loss = validation_loss
+        #     model_path = "model"
+        #     torch.save(model.state_dict(), model_path)
 
 
 if __name__ == "__main__":
