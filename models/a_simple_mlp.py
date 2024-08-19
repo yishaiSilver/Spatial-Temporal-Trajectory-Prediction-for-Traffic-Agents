@@ -5,8 +5,11 @@ This file contains a wrapper for the MLP model. Starting simple.
 import torch
 import torch.nn as nn
 
+import logging
+
 from models.layers.mlp import MLP
 
+logger = logging.getLogger(__name__)
 
 class SimpleMLP(nn.Module):
     """
@@ -23,6 +26,8 @@ class SimpleMLP(nn.Module):
         """
 
         super().__init__()
+        self.device = model_config["device"]
+
         # want to use an n-dimensional space just in case :)
         coord_dims = data_config["coord_dims"]
 
@@ -48,6 +53,9 @@ class SimpleMLP(nn.Module):
         # create the mlp
         self.mlp = MLP(input_size, hidden_size, output_size).float()
 
+        self.mlp.to(self.device)
+
+        logger.info("Created MLP")
 
     def forward(self, x):
         """
@@ -58,7 +66,5 @@ class SimpleMLP(nn.Module):
         x = x.float() # only one input, despite collate returning tensor
 
         outputs = self.mlp(x)
-
-        print(outputs.shape)
 
         return outputs

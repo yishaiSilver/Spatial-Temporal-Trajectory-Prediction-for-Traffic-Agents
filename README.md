@@ -119,19 +119,21 @@ To start, let's validate our pipeline with a simple MLP. Moreover, we'll do a si
 
 <details><summary>Ablation Study</summary>
 
-| Ablation Study with MLP                                                                                      |
-|--------------------------------------------------------------------------------------------------------------|
-| MLP on just the (naive) positions of the ego agent                                                         |
-| MLP with the world transformed w.r.t the ego agent                                                          |
-| MLP with the world transformed w.r.t the ego agent, but with the lanes (and their normals)                 |
-| MLP with the world transformed w.r.t the ego agent, but with the n closest agents (0 padding where needed) |
-| MLP with the world transformed w.r.t the ego agent, but with the n closest agents and the lanes            |
-| MLP with the world transformed w.r.t the ego agent and the lanes, but with the lanes filtered by their normal |
-| MLP with the world transformed w.r.t the ego agent and the filtered lanes and the n closest agents         |
+| Ablation Study with MLP                                                                                      | RMSE | RMSE   |
+|--------------------------------------------------------------------------------------------------------------|----------|--------|
+| MLP on just the (naive) positions of the ego agent                                                         | NaN     | NaN   |
+| MLP with the world transformed w.r.t the ego agent                                                          | 0.346     | 0.346   |
+| MLP with the world transformed w.r.t the ego agent, but with the lanes (and their normals)                 | ####     | ####   |
+| MLP with the world transformed w.r.t the ego agent, but with the n closest agents (0 padding where needed) | ####     | ####   |
+| MLP with the world transformed w.r.t the ego agent, but with the n closest agents and the lanes            | ####     | ####   |
+| MLP with the world transformed w.r.t the ego agent and the lanes, but with the lanes filtered by their normal | ####     | ####   |
+| MLP with the world transformed w.r.t the ego agent and the filtered lanes and the n closest agents         | ####     | ####   |
 
 </details>
 
-Put simply, we can see that transformation makes a big impact. 
+We can see that some transformation is required; we cannot simple use GPS-esque coordinates. The loss is just too large, even for floats. 
+
+At some point, we'll need to consider other transformations, but for the time being, I think our driver-centric world view is sufficient (after all, that's how we do it.)
 
 
 ### Lane Relevancy

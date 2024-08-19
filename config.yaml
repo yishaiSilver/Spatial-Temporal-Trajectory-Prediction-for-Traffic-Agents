@@ -19,18 +19,21 @@
 # undo transform
 # loss
 
+num_epochs: 5
+
 model: 
   name: SimpleMLP
-  hidden_size: [128, 128]
+  device: cuda
+  hidden_size: [512, 512, 512, 512, 512, 512]
   dropout: 0.2
 
 # config.yaml
 data:
   train_path: ./data/train
   val_path: ./data/val_in
-  batch_size: 1
+  batch_size: 32
   shuffle: true
-  num_workers: 1
+  num_workers: 4
 
   coord_dims: 2
   input_timesteps: 19

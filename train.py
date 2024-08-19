@@ -14,8 +14,12 @@ Raises:
 import argparse
 import torch
 from torch import nn
+import torch.multiprocessing as tmp
 import numpy as np
 import data_loader.data_loaders as data
+
+import logging
+
 # import model.loss as module_loss
 # import model.metric as module_metric
 
@@ -27,28 +31,38 @@ from models.a_simple_mlp import SimpleMLP
 import yaml
 import tqdm
 
-COUNT_MOVING_AVERAGE = 100
+COUNT_MOVING_AVERAGE = 250
+
 
 def train_epoch(model, optimizer, loss_fn, data_loader):
     """
-    Trains the model for one epoch using the given optimizer, loss function, and data loader.
+    Trains the model for one epoch using the given optimizer, loss function, 
+    and data loader.
 
     Args:
         model (nn.Module): The model to be trained.
-        optimizer (torch.optim.Optimizer): The optimizer used for updating the model's parameters.
-        loss_fn (callable): The loss function used to compute the loss between model outputs and labels.
-        data_loader (torch.utils.data.DataLoader): The data loader providing the training data.
+        optimizer (torch.optim.Optimizer): The optimizer model's parameters.
+        loss_fn (callable):  loss function
+        data_loader (torch.utils.data.DataLoader): Data loader providing data.
 
     Returns:
         None
     """
     model.train(True)
 
-    losses = []
+    device = model.device
+
+    moving_avg_sum = 0
+    moving_avg_losses = []
+
     iterator = tqdm.tqdm(data_loader, total=int(len(data_loader)))
 
     for batch_data in iterator:
         inputs, labels, prediction_correction, metadata = batch_data
+
+        # move to the device
+        inputs = tuple(input_tensor.to(device) for input_tensor in inputs)
+        labels = labels.to(device)
 
         optimizer.zero_grad()
 
@@ -56,18 +70,25 @@ def train_epoch(model, optimizer, loss_fn, data_loader):
 
         predictions = prediction_correction(predictions, labels)
 
+        # print(predictions)
+        # print(labels)
+
         loss = loss_fn(predictions, labels)
+
+        # break
 
         loss.backward()
 
         optimizer.step()
 
-        losses.append(loss.item())
-        if len(losses) > COUNT_MOVING_AVERAGE:
-            losses.pop(0)
+        moving_avg_losses.append(loss.item())
+        moving_avg_sum += loss.item()
+        if len(moving_avg_losses) > COUNT_MOVING_AVERAGE:
+            first_loss = moving_avg_losses.pop(0)
+            moving_avg_sum -= first_loss
 
         iterator.set_postfix_str(
-            f"avg. loss={sum(losses)/len(losses)}"
+            f"avg. loss={moving_avg_sum/len(moving_avg_losses):.5f}"
         )  # tod easy optimize
 
 
@@ -103,26 +124,33 @@ def main(main_config):
     Train the spatiotemporal trajectory prediction model for traffic agents.
 
     Args:
-        config (dict): Configuration dictionary containing model, optimizer, 
+        config (dict): Configuration dictionary containing model, optimizer,
             loss, data, and num_epochs.
 
     Returns:
         None
     """
 
+    # initialize logging
+    logging.basicConfig()
+
+    # initialize cuda multiprocessing to avoid error
+    # tmp.set_start_method('spawn', force=True)
+
     # get the configs
     data_config = main_config["data"]
-    model_config = main_config['model']
-
+    model_config = main_config["model"]
 
     # get the data
-    train_loader = data.create_data_loader(model_config, data_config, train=True)
+    train_loader = data.create_data_loader(
+        model_config, data_config, train=True
+    )
     # val_loader = data.create_data_loader(model_config, data_config, train=False)
 
     # Rest of the code...
     # get the model
-    model = SimpleMLP(model_config, data_config) # TODO: magic line (sort of)
-                                                 # switch to config file spec.
+    model = SimpleMLP(model_config, data_config)  # TODO: magic line (sort of)
+    # switch to config file spec.
 
     # get the optimizer
     # optimizer_config = main_config['optimizer']
@@ -134,10 +162,9 @@ def main(main_config):
     # loss_config = main_config['loss']
     loss_fn = nn.MSELoss()  # tod: magic line
 
-
     # get the number of epochs:
     # num_epochs = main_config['num_epochs']
-    num_epochs = 1
+    num_epochs = main_config["num_epochs"]
 
     best_val_loss = np.inf
     for epoch in range(num_epochs):

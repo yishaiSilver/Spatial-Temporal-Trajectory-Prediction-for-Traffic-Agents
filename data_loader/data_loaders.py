@@ -9,6 +9,9 @@ import os.path
 import pickle
 from glob import glob
 
+import numpy as np
+
+import torch
 from torch.utils.data import Dataset, DataLoader
 
 from data_loader.collate import Collate
@@ -52,6 +55,55 @@ class ArgoverseDataset(Dataset):
         return data
 
 
+def collate(batch_data):
+    """
+    Apply the collate transformation to the given batch_data.
+
+    Args:
+        batch_data (list): List of dictionaries representing the batch data.
+
+    Returns:
+        Tensor: Transformed batch data, ready for input to the model.
+    """
+
+    batch_inputs = []
+    batch_labels = []
+    batch_prediction_correction = []
+    batch_correction_metadata = []
+
+    for datum in batch_data:
+        model_input, label, prediction_correction, metadata = datum
+
+        batch_inputs.append(model_input)
+        batch_labels.append(label)
+        batch_prediction_correction.append(prediction_correction)
+        batch_correction_metadata.append(metadata)
+
+    # print(batch_inputs)
+
+    inputs = np.array(batch_inputs)
+    labels = np.array(batch_labels)
+
+    # we only need one function reference because all data should have 
+    # the same correction function
+    prediction_correction = batch_prediction_correction[0]
+
+    inputs = torch.tensor(inputs, dtype=torch.float32)
+
+    # TODO device
+    inputs.to('cuda')
+
+    # TODO convert to tensors
+
+    # convert all inputs to tensors
+    inputs = tuple(inputs) 
+
+    # convert all labels to tensors
+    labels = torch.tensor(labels, dtype=torch.float32)
+
+    return inputs, labels, prediction_correction, batch_correction_metadata
+
+
 def create_data_loader(model_config, data_config, train=True, examine=False):
     """TODO: create_data_loader"""
     #   data_path: str, transforms=None, batch_size=4, shuffle=False, val_split=0.0, num_workers=1
@@ -63,40 +115,16 @@ def create_data_loader(model_config, data_config, train=True, examine=False):
     batch_size = data_config["batch_size"]
     num_workers = data_config["num_workers"]
 
-    model_name = model_config["name"]
-    transforms = data_config["transforms"]
+    transform_function = BaseTransformation(model_config, data_config)
 
-    def transform_fn(x):
-        tf = BaseTransformation()
-        x = tf.apply(x)
-
-        if transforms is not None:
-            # perform whatever additional transformations are needed
-            if "AgentCenter" in transforms:
-                tf = AgentCenter()
-                x = tf.apply(x)
-
-        # add per-model transformations here
-        if model_name == "SimpleMLP":
-            tf = preSimpleMLP(data_config)
-            x = tf.apply(x)
-
-        return x
-
-    collate = Collate()
-    collate_fn = collate.apply
-
-    if examine:
-
-        def noop(x):
-            return x
-
-        collate_fn = noop
-
-    dataset = ArgoverseDataset(data_path, transform=transform_fn)
+    dataset = ArgoverseDataset(
+        data_path,
+        transform=transform_function,
+    )
     return DataLoader(
         dataset,
         batch_size=batch_size,
-        collate_fn=collate_fn,
+        collate_fn=collate,
         num_workers=num_workers,
+        multiprocessing_context="spawn",
     )

@@ -6,6 +6,7 @@ transformation to the given batch data.
 """
 
 import numpy as np
+import torch
 
 
 class AgentCenter:
@@ -31,7 +32,8 @@ class AgentCenter:
 
         return
 
-    def homogenize_matrix(self, matrix):
+    @staticmethod
+    def homogenize_matrix(matrix):
         """
         Homogenize a 2D matrix by adding a column of ones.
 
@@ -58,7 +60,8 @@ class AgentCenter:
         )
         return homogenized_matrix
 
-    def apply(self, datum):
+    @staticmethod
+    def apply(datum):
         """
         Apply agent-centered transformation to the given datum.
 
@@ -101,10 +104,10 @@ class AgentCenter:
         _, num_timesteps, _ = positions.shape
 
         # homogenize the 2D data
-        positions_homogenous = self.homogenize_matrix(positions)
-        velocities_homogenous = self.homogenize_matrix(velocities)
-        lanes_homogenous = self.homogenize_matrix(lanes)
-        lane_norms_homogenous = self.homogenize_matrix(lane_norms)
+        positions_homogenous = AgentCenter.homogenize_matrix(positions)
+        velocities_homogenous = AgentCenter.homogenize_matrix(velocities)
+        lanes_homogenous = AgentCenter.homogenize_matrix(lanes)
+        lane_norms_homogenous = AgentCenter.homogenize_matrix(lane_norms)
 
         # translation of the lanes needs to be done differently:
         # - better RAM usage
@@ -186,33 +189,34 @@ class AgentCenter:
         lane_norms = lane_norms_homogenous[:, :2, 0]
         offsets = offsets_homogenous[:, :2, 0]
 
-        # print(lanes)
+        # Update the lane positions for the target agent: don't just want 0s
+        # TODO: consider refactoring to some sort of ["label"] field
+        positions[agent_index] = offsets
+
+        p_out = positions[:, input_length:]
+        # cumsum
+        p_out = np.cumsum(p_out, axis=1)
 
         # update the positions in the datum
         datum["p_in"] = positions[:, :input_length]
         datum["v_in"] = velocities[:, :input_length]
-        datum["p_out"] = positions[:, input_length:]
+        datum["p_out"] = p_out
         datum["v_out"] = velocities[:, input_length:]
 
         # update the lane positions
         datum["lane"] = lanes
         datum["lane_norm"] = lane_norms
 
-        # save the scene offsets to invert the transformation
-        datum["offsets"] = offsets
-
-        # Adding offsets as the output key
-        datum["labels"] = offsets
-
         # save the prior correction
-        self.prior_prediction_correction = datum["prediction_correction"]
+        # AgentCenter.prior_prediction_correction = datum["prediction_correction"]
 
         # update the prediction correction
-        datum["prediction_correction"] = self.prediction_correction
+        datum["prediction_correction"] = AgentCenter.inverse
 
         return datum
 
-    def prediction_correction(self, batch_predictions, batch_metadata):
+    @staticmethod
+    def inverse(batch_predictions, batch_metadata):
         """TODO: correct_predictions"""
 
         # IMPORTANT: inputs are batched
@@ -227,7 +231,7 @@ class AgentCenter:
         # input, output, prediction_correction, batch_correction_metadata.
 
         # convert displacements to positions by using cumsum
-        predictions = np.cumsum(batch_predictions, axis=1)
+        # predictions = torch.cumsum(batch_predictions, axis=1)
 
-        # apply corrections needed by other transformations.
-        return self.prior_prediction_correction(predictions, batch_metadata)
+        # # apply corrections needed by other transformations.
+        # return AgentCenter.prior_prediction_correction(batch_predictions, batch_metadata)

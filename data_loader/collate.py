@@ -44,6 +44,11 @@ class Collate:
         # the same correction function
         prediction_correction = batch_prediction_correction[0]
 
+        input = torch.tensor(inputs, dtype=torch.float32)
+
+        # TODO device
+        input.to('cuda')
+
         # convert all inputs to tensors
         inputs = tuple(torch.tensor(inputs, dtype=torch.float32))
 
