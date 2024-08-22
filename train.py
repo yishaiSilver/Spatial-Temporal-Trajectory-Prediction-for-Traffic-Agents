@@ -107,16 +107,29 @@ def validate_epoch(model, loss_fn, data_loader):
 
     model.eval()
 
+    device = model.device
+
     val_loss = 0.0
     iterator = tqdm.tqdm(data_loader, total=int(len(data_loader)))
     with torch.no_grad():
         for batch_data in iterator:
-            inputs, labels = batch_data
+            inputs, labels, prediction_correction, metadata = batch_data
+            
+            # move to the device
+            inputs = tuple(input_tensor.to(device) for input_tensor in inputs)
+            labels = labels.to(device)
+
+
             outputs = model(inputs)
+
+            # postprocess the outputs
+            outputs = prediction_correction(outputs, labels)
+
             loss = loss_fn(outputs, labels)
+
             val_loss += loss.item()
 
-    return val_loss
+    return val_loss / len(data_loader)
 
 
 def main(main_config):
@@ -142,7 +155,7 @@ def main(main_config):
     model_config = main_config["model"]
 
     # get the data
-    train_loader = data.create_data_loader(
+    train_loader, val_loader = data.create_data_loader(
         model_config, data_config, train=True
     )
     # val_loader = data.create_data_loader(model_config, data_config, train=False)
@@ -171,14 +184,14 @@ def main(main_config):
         print(f"EPOCH {epoch}:")
 
         train_epoch(model, optimizer, loss_fn, train_loader)
-        # validation_loss = validate_epoch(model, loss_fn, val_loader)
+        validation_loss = validate_epoch(model, loss_fn, val_loader)
 
-        # # save the model if it's the best
-        # if validation_loss < best_val_loss:
-        #     print(f"Best Validation loss: {validation_loss}")
-        #     best_val_loss = validation_loss
-        #     model_path = "model"
-        #     torch.save(model.state_dict(), model_path)
+        # save the model if it's the best
+        if validation_loss < best_val_loss:
+            print(f"Best Validation loss: {validation_loss}")
+            best_val_loss = validation_loss
+            model_path = f"models/saved_weights/{model_config['name']}.pth"
+            torch.save(model.state_dict(), model_path)
 
 
 if __name__ == "__main__":

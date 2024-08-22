@@ -22,16 +22,6 @@ class AgentCenter:
             removing the offsets.
     """
 
-    def __init__(self):
-        super().__init__()
-
-        self.input_offsets = None
-        self.output_offsets = None
-
-        self.prior_prediction_correction = None
-
-        return
-
     @staticmethod
     def homogenize_matrix(matrix):
         """
@@ -190,7 +180,6 @@ class AgentCenter:
         offsets = offsets_homogenous[:, :2, 0]
 
         # Update the lane positions for the target agent: don't just want 0s
-        # TODO: consider refactoring to some sort of ["label"] field
         positions[agent_index] = offsets
 
         p_out = positions[:, input_length:]
@@ -231,7 +220,9 @@ class AgentCenter:
         # input, output, prediction_correction, batch_correction_metadata.
 
         # convert displacements to positions by using cumsum
-        # predictions = torch.cumsum(batch_predictions, axis=1)
+        batch_predictions = torch.cumsum(batch_predictions, axis=1)
+
+        return batch_predictions
 
         # # apply corrections needed by other transformations.
         # return AgentCenter.prior_prediction_correction(batch_predictions, batch_metadata)

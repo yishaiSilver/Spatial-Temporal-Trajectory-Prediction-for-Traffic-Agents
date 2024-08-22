@@ -94,7 +94,12 @@ class preSimpleMLP():
         """
         Apply the prediction correction to the data.
         """
+        num_batches = len(batch_predictions)
 
-        # return prior_prediction_correction(
-        #     batch_predictions, batch_metadata
-        # )
+        # reshape to num_batches x num_timesteps x num_features
+        # TODO this is a magic number. Use metadata?
+        batch_predictions = batch_predictions.reshape(
+            num_batches, 30, 2
+        )
+
+        return batch_predictions
