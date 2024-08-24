@@ -9,220 +9,184 @@ import numpy as np
 import torch
 
 
-class AgentCenter:
+def homogenize_matrix(matrix):
     """
-    Applies agent-centered transformation to the given batch_data.
+    Homogenize a 2D matrix by adding a column of ones.
 
-    Methods:
-        apply(batch_data):
-            Apply agent-centered transformation to the given batch_data.
+    Args:
+        matrix (np.ndarray): 2D matrix.
 
-        invert(batch_data):
-            Inverts the position inputs and outputs in the batch data by
-            removing the offsets.
+    Returns:
+        np.ndarray: Homogenized matrix with an additional column of ones.
     """
 
-    @staticmethod
-    def homogenize_matrix(matrix):
-        """
-        Homogenize a 2D matrix by adding a column of ones.
+    # get the original shape
+    original_shape = matrix.shape
 
-        Args:
-            matrix (np.ndarray): 2D matrix.
+    # get the non-numerical dimensions
+    non_numerical_dims = original_shape[:-1]
 
-        Returns:
-            np.ndarray: Homogenized matrix with an additional column of ones.
-        """
+    # add the '1' layer/row
+    shape = non_numerical_dims + (1,)
+    ones = np.ones(shape)
 
-        # get the original shape
-        original_shape = matrix.shape
+    homogenized_matrix = np.concatenate(
+        [matrix, ones],
+        axis=-1,
+    )
+    return homogenized_matrix
 
-        # get the non-numerical dimensions
-        non_numerical_dims = original_shape[:-1]
 
-        # add the '1' layer/row
-        shape = non_numerical_dims + (1,)
-        ones = np.ones(shape)
+def get_translation_matrix(positions):
+    """
+    Gets the translation matrix for the given positions.
+    """
+    num_timesteps = positions.shape[0]
 
-        homogenized_matrix = np.concatenate(
-            [matrix, ones],
-            axis=-1,
+    translation_transforms = np.eye(3)[np.newaxis].repeat(num_timesteps, axis=0)
+
+    # set the translation component of the transformation matrices
+    translation_transforms[:, :2, 2] -= positions
+
+    return translation_transforms
+
+
+def get_rotation_matrix(positions):
+    """
+    Gets the rotation matrix for the given positions.
+    """
+    rotation_transforms = np.eye(2)
+
+    # get the angle from the target agent's first input position to the
+    # final input position
+    first_position = positions[0]
+    last_position = positions[-1]
+
+    # get the angle
+    theta = (
+        -np.arctan2(
+            last_position[1] - first_position[1],
+            last_position[0] - first_position[0],
         )
-        return homogenized_matrix
+        + np.pi / 2
+    )
 
-    @staticmethod
-    def apply(datum):
-        """
-        Apply agent-centered transformation to the given datum.
+    rotation_transforms[0, 0] = np.cos(theta)
+    rotation_transforms[0, 1] = -np.sin(theta)
+    rotation_transforms[1, 0] = np.sin(theta)
+    rotation_transforms[1, 1] = np.cos(theta)
 
-        Args:
-            datum (dict): Dictionary representing a single data point.
+    return rotation_transforms
 
-        Returns:
-            dict: Transformed datum with updated positions.
-        """
-        # get all of the ids for the agents being tracked
-        # renaming due to bad naming in the dataset
-        agent_ids = datum["track_id"]
 
-        # extract the agent_id from the datum
-        target_id = datum["agent_id"]
+def apply(datum):
+    """
+    Apply agent-centered transformation to the given datum.
 
-        # get the index of the target agent
-        agent_index = np.where(agent_ids == target_id)[0][0]
+    Args:
+        datum (dict): Dictionary representing a single data point.
 
-        # get the lanes and norms for the target agent
-        lanes = np.array(datum["lane"])
-        lane_norms = np.array(datum["lane_norm"])
+    Returns:
+        dict: Transformed datum with updated positions.
+    """
+    # get all of the ids for the agents being tracked
+    # renaming due to bad naming in the dataset
+    agent_ids = datum["track_id"]
 
-        # get the input and output data
-        positions = np.array(datum["p_in"])
-        velocities = np.array(datum["v_in"])
+    # extract the agent_id from the datum
+    target_id = datum["agent_id"]
 
-        # save the cutoff for the input data before we extend it
-        input_length = positions.shape[1]
+    # get the index of the target agent
+    agent_index = np.where(agent_ids == target_id)[0][0]
 
-        # extend by the output data
-        positions = np.concatenate(
-            [positions, np.array(datum["p_out"])], axis=1
-        )
-        velocities = np.concatenate(
-            [velocities, np.array(datum["v_out"])], axis=1
-        )
+    # get the input and output data
+    positions_in = np.array(datum["p_in"])
+    velocities_in = np.array(datum["v_in"])
+    positions_out = np.array(datum["p_out"])
+    velocities_out = np.array(datum["v_out"])
 
-        # get the number of timesteps
-        _, num_timesteps, _ = positions.shape
+    # FIXME:
+    # save the input length before we extend it
+    input_length = positions_in.shape[1]
 
-        # homogenize the 2D data
-        positions_homogenous = AgentCenter.homogenize_matrix(positions)
-        velocities_homogenous = AgentCenter.homogenize_matrix(velocities)
-        lanes_homogenous = AgentCenter.homogenize_matrix(lanes)
-        lane_norms_homogenous = AgentCenter.homogenize_matrix(lane_norms)
+    # extend by the output data
+    positions = np.concatenate([positions_in, positions_out], axis=1)
+    velocities = np.concatenate([velocities_in, velocities_out], axis=1)
 
-        # translation of the lanes needs to be done differently:
-        # - better RAM usage
-        # - possible use during inference
-        lanes_homogenous -= positions_homogenous[agent_index, 0]
+    # ccenter the positions around the target agent
+    target_positions = positions[agent_index]
+    positions = positions - target_positions
 
-        # create a list of transformation matrices that center all points
-        # around the target agent
-        translation_transforms = np.eye(3)[np.newaxis].repeat(
-            num_timesteps, axis=0
-        )
+    # create the rotation transform (key difference: only one needed)
+    rotation_transforms = get_rotation_matrix(positions_in[agent_index])
+    positions = positions @ rotation_transforms
 
-        # get the target agent's positions
-        target_positions = positions[agent_index]
+    offsets = np.diff(target_positions, axis=0)
+    first_offset = np.array([0, 0])
+    offsets = np.vstack([first_offset, offsets])
+    offsets = offsets @ rotation_transforms
+    positions[agent_index] = offsets
 
-        # get the offsets that should be experienced by lanes (which are not
-        # updated at every timestamp).
-        # needs to be done before centering positions around agent (diff -> 0)
-        offsets_homogenous = np.diff(positions_homogenous[agent_index], axis=0)
-        first_offset = np.array([0, 0, 0])
-        offsets_homogenous = np.vstack([first_offset, offsets_homogenous])
+    # update the positions in the datum
+    datum["p_in"] = positions[:, :input_length]
+    datum["v_in"] = velocities[:, :input_length]
+    datum["v_out"] = velocities[:, input_length:]
 
-        # set the translation component of the transformation matrices
-        translation_transforms[:, :2, 2] -= target_positions
+    # update the prediction correction
+    datum["prediction_correction"] = inverse
 
-        # apply the translation transformation to all points
-        positions_homogenous = np.matmul(
-            translation_transforms, positions_homogenous[:, :, :, np.newaxis]
-        )
+    # get the inverses of the translation and rotation matrices
+    # translation_transforms_inv = np.linalg.inv(translation_transforms)
+    rotation_transforms_inv = np.linalg.inv(rotation_transforms)
 
-        # get rid of the last dimension
-        # TODO: why does the extra dimension exist?
-        positions_homogenous = positions_homogenous[:, :, :, 0]
+    metadata = {
+        "target_offset": target_positions,
+        "rotation_transforms": rotation_transforms_inv,
+    }
 
-        # create the rotation transform (key difference: only one needed)
-        rotation_transforms = np.eye(3)
+    datum["batch_correction_metadata"] = metadata
 
-        # get the angle from the target agent's first input position to the
-        # final input position
-        first_position = positions[agent_index, 0]
-        last_position = positions[agent_index, -1]
+    return datum
 
-        # get the angle
-        theta = (
-            -np.arctan2(
-                last_position[1] - first_position[1],
-                last_position[0] - first_position[0],
-            )
-            + np.pi / 2
-        )
 
-        rotation_transforms[0, 0] = np.cos(theta)
-        rotation_transforms[0, 1] = -np.sin(theta)
-        rotation_transforms[1, 0] = np.sin(theta)
-        rotation_transforms[1, 1] = np.cos(theta)
+def inverse(predictions, metadata):
+    """TODO: correct_predictions"""
 
-        # apply the rotation transformation to:
-        # positions, velocities, lanes, lane_norms
-        positions_homogenous = np.matmul(
-            rotation_transforms, positions_homogenous[:, :, :, np.newaxis]
-        )
-        velocities_homogenous = np.matmul(
-            rotation_transforms, velocities_homogenous[:, :, :, np.newaxis]
-        )
-        lanes_homogenous = np.matmul(
-            rotation_transforms, lanes_homogenous[:, :, np.newaxis]
-        )
-        lane_norms_homogenous = np.matmul(
-            rotation_transforms, lane_norms_homogenous[:, :, np.newaxis]
-        )
-        offsets_homogenous = np.matmul(
-            rotation_transforms, offsets_homogenous[:, :, np.newaxis]
-        )
+    # IMPORTANT: inputs are batched
+    batch_size = predictions.shape[0]
 
-        # dehomogenize the data
-        positions = positions_homogenous[:, :, :2, 0]
-        velocities = velocities_homogenous[:, :, :2, 0]
-        lanes = lanes_homogenous[:, :2, 0]  # one less dimension b/c no times
-        lane_norms = lane_norms_homogenous[:, :2, 0]
-        offsets = offsets_homogenous[:, :2, 0]
+    # cumsum along the time dimension
+    predictions = torch.cumsum(predictions, axis=1)
 
-        # Update the lane positions for the target agent: don't just want 0s
-        positions[agent_index] = offsets
+    # get the translation and rotation matrices
+    target_positions = [
+        metadata[i]["target_offset"][18] for i in range(batch_size)
+    ]
+    rotation_transforms = [
+        metadata[i]["rotation_transforms"] for i in range(batch_size)
+    ]
 
-        p_out = positions[:, input_length:]
-        # cumsum
-        p_out = np.cumsum(p_out, axis=1)
+    # convert to numpy
+    target_positions = np.array(target_positions)
+    rotation_transforms = np.array(rotation_transforms)
 
-        # update the positions in the datum
-        datum["p_in"] = positions[:, :input_length]
-        datum["v_in"] = velocities[:, :input_length]
-        datum["p_out"] = p_out
-        datum["v_out"] = velocities[:, input_length:]
+    # convert to tensors
+    target_positions = torch.tensor(target_positions, dtype=torch.float32)
+    rotation_transforms = torch.tensor(rotation_transforms, dtype=torch.float32)
 
-        # update the lane positions
-        datum["lane"] = lanes
-        datum["lane_norm"] = lane_norms
+    # apply to all timestamps (batch, timestamp, 2)
+    target_positions = target_positions.unsqueeze(1)
 
-        # save the prior correction
-        # AgentCenter.prior_prediction_correction = datum["prediction_correction"]
+    # put on device
+    device = predictions.device
+    target_positions = target_positions.to(device)
+    rotation_transforms = rotation_transforms.to(device)
 
-        # update the prediction correction
-        datum["prediction_correction"] = AgentCenter.inverse
+    # apply the inverse transformations
+    # (30, 2) @ (2, 2) -> (30, 2)
+    predictions = predictions @ rotation_transforms
 
-        return datum
+    # (30, 2) + (2) -> (30, 2)
+    predictions = predictions + target_positions
 
-    @staticmethod
-    def inverse(batch_predictions, batch_metadata):
-        """TODO: correct_predictions"""
-
-        # IMPORTANT: inputs are batched
-
-        # NOTE: Since we have only moved the positions, we can just leave them
-        # as is for training, but we'll need to revert them back to the original
-        # positions when we test against the dataset.
-
-        # Really, this should convert all the way back to the original, global
-        # positions, but that's a bit more effor. Leaving it as a TODO for now.
-        # thought: embed metadata in the data to know how to invert it:
-        # input, output, prediction_correction, batch_correction_metadata.
-
-        # convert displacements to positions by using cumsum
-        batch_predictions = torch.cumsum(batch_predictions, axis=1)
-
-        return batch_predictions
-
-        # # apply corrections needed by other transformations.
-        # return AgentCenter.prior_prediction_correction(batch_predictions, batch_metadata)
+    return predictions

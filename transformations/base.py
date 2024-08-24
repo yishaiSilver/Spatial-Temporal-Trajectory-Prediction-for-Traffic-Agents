@@ -3,7 +3,7 @@
 # import torchvision.transforms as T
 
 
-from transformations.agent_centered_transformations import AgentCenter
+import transformations.agent_centered_transformations as AgentCenter
 from transformations.model_preprocessing.pre_simple_mlp import preSimpleMLP
 
 
@@ -17,7 +17,7 @@ class BaseTransformation:
     def __call__(self, x):
         return self.forward_transform(x, self.model_config, self.data_config)
 
-    def inverse_transform(self, batch_predictions, batch_metadata):
+    def inverse_transform(self, batch_predictions, meta):
         """
         Apply the prediction correction to the data.
         """
@@ -28,20 +28,20 @@ class BaseTransformation:
         # print("inverse_transform")
 
         # # updating name for readability
-        # x = batch_predictions
+        x = batch_predictions
         # meta = batch_metadata
 
-        # # inverse pass through whatever model-specific transformations are needed
-        # if model_name == "SimpleMLP":
-        #     x = preSimpleMLP.inverse(x, meta)
+        # inverse pass through whatever model-specific transformations are needed
+        if model_name == "SimpleMLP":
+            x = preSimpleMLP.inverse(x, meta)
 
-        # # inverse pass through whatever model-agnostic transformations are needed
-        # if transforms is not None:
-        #     # perform whatever additional transformations are needed
-        #     if "AgentCenter" in transforms:
-        #         x = AgentCenter.inverse(x, meta)
+        # inverse pass through whatever model-agnostic transformations are needed
+        if transforms is not None:
+            # perform whatever additional transformations are needed
+            if "AgentCenter" in transforms:
+                x = AgentCenter.inverse(x, meta)
 
-        return batch_predictions
+        return x
 
     def forward_transform(self, x, model_config, data_config):
         """

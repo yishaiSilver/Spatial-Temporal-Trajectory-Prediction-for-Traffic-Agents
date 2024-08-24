@@ -84,9 +84,9 @@ class preSimpleMLP():
 
         # inputs, labels, correction_function, and metadata
         inputs = vector
-        labels = datum["p_out"][target_index].flatten()
+        labels = datum["p_out"][target_index]
         correction = datum["inverse"]
-        metadata = None
+        metadata = datum["batch_correction_metadata"]
         return inputs, labels, correction, metadata
 
     @staticmethod

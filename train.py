@@ -68,14 +68,14 @@ def train_epoch(model, optimizer, loss_fn, data_loader):
 
         predictions = model(inputs)
 
-        predictions = prediction_correction(predictions, labels)
+        predictions = prediction_correction(predictions, metadata)
 
         # print(predictions)
         # print(labels)
 
-        loss = loss_fn(predictions, labels)
-
         # break
+
+        loss = loss_fn(predictions, labels)
 
         loss.backward()
 
@@ -119,11 +119,10 @@ def validate_epoch(model, loss_fn, data_loader):
             inputs = tuple(input_tensor.to(device) for input_tensor in inputs)
             labels = labels.to(device)
 
-
             outputs = model(inputs)
 
             # postprocess the outputs
-            outputs = prediction_correction(outputs, labels)
+            outputs = prediction_correction(outputs, metadata)
 
             loss = loss_fn(outputs, labels)
 
@@ -168,7 +167,7 @@ def main(main_config):
     # get the optimizer
     # optimizer_config = main_config['optimizer']
     optimizer = torch.optim.SGD(
-        model.parameters(), lr=0.01, momentum=0.1, weight_decay=0.01
+        model.parameters(), lr=0.001, momentum=0.1, weight_decay=0.001
     )  # tod: magic line
 
     # get the loss

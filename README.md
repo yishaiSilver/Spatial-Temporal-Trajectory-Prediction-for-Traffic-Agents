@@ -144,3 +144,11 @@ At first glance, the answer is "very," but, looking at the animation centered on
 
 ## Research
 - This is not a new problem, 
+
+## Visualization notes. 
+
+Ultimately, when the true purpose of our transformations are not to visualize the data, rather they are to correct whatever the output of the model is such that we can compare it to ground truth.  As such, my inverse functions, will not take in the datum; they will take in the singular vector of p_out for the agent/target and inverse it w.r.t. to the transformation that was applied. Then, once all inverses have been applied, we should be back in the world frame and our results should be similar to the original values of p_out.
+
+In order to visualize, we'll just run through the model and inverse the output. Though a great deal of data is lost, we'll simply have a parallel dataset without transformations, combine the two, and animate them.
+
+This strategy may not be the best, standerd, or even efficient with regards to visualization, but it's simple and it keeps the main goal in mind: to train the model efficiently.
