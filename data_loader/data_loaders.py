@@ -132,6 +132,7 @@ def create_data_loader(model_config, data_config, train=True, examine=False):
 
     train_loader = DataLoader(
         train_set,
+        shuffle=False,
         batch_size=batch_size,
         collate_fn=collate,
         num_workers=num_workers,

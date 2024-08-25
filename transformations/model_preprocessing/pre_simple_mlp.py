@@ -78,15 +78,11 @@ class preSimpleMLP():
                 vector.extend(lane_position)
                 vector.extend(lane_norm)
 
-        # TODO: perhaps move this to be part of __init__?
-        # save the prior prediction correction
-        prior_prediction_correction = datum["prediction_correction"]
-
         # inputs, labels, correction_function, and metadata
         inputs = vector
         labels = datum["p_out"][target_index]
         correction = datum["inverse"]
-        metadata = datum["batch_correction_metadata"]
+        metadata = datum["homogenize_matrix"]
         return inputs, labels, correction, metadata
 
     @staticmethod

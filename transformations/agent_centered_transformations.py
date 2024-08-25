@@ -9,48 +9,6 @@ import numpy as np
 import torch
 
 
-def homogenize_matrix(matrix):
-    """
-    Homogenize a 2D matrix by adding a column of ones.
-
-    Args:
-        matrix (np.ndarray): 2D matrix.
-
-    Returns:
-        np.ndarray: Homogenized matrix with an additional column of ones.
-    """
-
-    # get the original shape
-    original_shape = matrix.shape
-
-    # get the non-numerical dimensions
-    non_numerical_dims = original_shape[:-1]
-
-    # add the '1' layer/row
-    shape = non_numerical_dims + (1,)
-    ones = np.ones(shape)
-
-    homogenized_matrix = np.concatenate(
-        [matrix, ones],
-        axis=-1,
-    )
-    return homogenized_matrix
-
-
-def get_translation_matrix(positions):
-    """
-    Gets the translation matrix for the given positions.
-    """
-    num_timesteps = positions.shape[0]
-
-    translation_transforms = np.eye(3)[np.newaxis].repeat(num_timesteps, axis=0)
-
-    # set the translation component of the transformation matrices
-    translation_transforms[:, :2, 2] -= positions
-
-    return translation_transforms
-
-
 def get_rotation_matrix(positions):
     """
     Gets the rotation matrix for the given positions.
@@ -64,11 +22,11 @@ def get_rotation_matrix(positions):
 
     # get the angle
     theta = (
-        -np.arctan2(
+        np.arctan2(
             last_position[1] - first_position[1],
             last_position[0] - first_position[0],
         )
-        + np.pi / 2
+        - np.pi / 2
     )
 
     rotation_transforms[0, 0] = np.cos(theta)
@@ -88,6 +46,10 @@ def apply(datum):
 
     Returns:
         dict: Transformed datum with updated positions.
+
+    TODO: 
+        - [ ] Add support for which datum modifications are used
+              I.e. are we using the lane data? do we need to update it?
     """
     # get all of the ids for the agents being tracked
     # renaming due to bad naming in the dataset
@@ -101,11 +63,14 @@ def apply(datum):
 
     # get the input and output data
     positions_in = np.array(datum["p_in"])
-    velocities_in = np.array(datum["v_in"])
     positions_out = np.array(datum["p_out"])
+
+    velocities_in = np.array(datum["v_in"])
     velocities_out = np.array(datum["v_out"])
 
-    # FIXME:
+    lane_positions = np.array(datum["lane"])
+    lane_norms = np.array(datum["lane_norm"])
+
     # save the input length before we extend it
     input_length = positions_in.shape[1]
 
@@ -116,10 +81,13 @@ def apply(datum):
     # ccenter the positions around the target agent
     target_positions = positions[agent_index]
     positions = positions - target_positions
+    lane_positions = lane_positions - target_positions[0] # only using 0th ts
 
     # create the rotation transform (key difference: only one needed)
     rotation_transforms = get_rotation_matrix(positions_in[agent_index])
     positions = positions @ rotation_transforms
+    lane_positions = lane_positions @ rotation_transforms
+    lane_norms = lane_norms @ rotation_transforms
 
     offsets = np.diff(target_positions, axis=0)
     first_offset = np.array([0, 0])
@@ -130,7 +98,13 @@ def apply(datum):
     # update the positions in the datum
     datum["p_in"] = positions[:, :input_length]
     datum["v_in"] = velocities[:, :input_length]
+
+    # save the outputs (transformed, for visualization purposes)
+    datum["p_out_transformed"] = positions[:, input_length:]
     datum["v_out"] = velocities[:, input_length:]
+
+    datum["lane"] = lane_positions
+    datum["lane_norm"] = lane_norms
 
     # update the prediction correction
     datum["prediction_correction"] = inverse
@@ -144,7 +118,7 @@ def apply(datum):
         "rotation_transforms": rotation_transforms_inv,
     }
 
-    datum["batch_correction_metadata"] = metadata
+    datum["metadata"] = metadata
 
     return datum
 
