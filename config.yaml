@@ -41,8 +41,8 @@ data:
   input_timesteps: 19
   output_timesteps: 30
   features:
-    lane: 0
-    p_in: 0
+    lane: 0 # needs work
+    p_in: 5
     v_in: 0 # should be same as p_in (num agents being considered)
 
   transforms:

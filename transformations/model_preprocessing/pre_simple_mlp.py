@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class preSimpleMLP():
+class preSimpleMLP:
     """
     SimpleMLP class for the SimpleMLP model.
     """
@@ -21,7 +21,6 @@ class preSimpleMLP():
         feat_agent_velocities = features["v_in"]
         feat_lanes = features["lane"]
 
-
         # the MLP can only take in a flattened vector
         vector = []
 
@@ -34,19 +33,32 @@ class preSimpleMLP():
         p_in = datum["p_in"]
         target_p_in = p_in[target_index]
 
+        # get the number of agents (non-zero)
+        agent_mask = datum["car_mask"]
+        num_agents = np.sum(agent_mask)
+
+
         # add the target agent's position, flattened
         vector.extend(target_p_in.flatten())
 
         # add velocities of the n nearest agents
         if feat_agent_positions > 0:
             # sort the agents by distance to the target agent
+            # since target agent is so close to 0, just use 0
             sorted_indices = np.argsort(
-                np.linalg.norm(p_in - target_p_in, axis=1)
+                np.linalg.norm(p_in[:, :, :], axis=(1, 2))
             )
 
-            for i in range(1, p_in + 1):  # skip 0 because it's the target
+            for i in range(
+                1, feat_agent_positions + 1
+            ):  
+                # skip 0 because it's the target
                 # get the position of the ith closest agent
                 agent_p_in = p_in[sorted_indices[i]]
+
+                # change to zero-padding if non-agent
+                if i >= num_agents:
+                    agent_p_in = np.zeros_like(agent_p_in)
 
                 # add the position to the vector, flattened
                 vector.extend(agent_p_in.flatten())
@@ -94,8 +106,6 @@ class preSimpleMLP():
 
         # reshape to num_batches x num_timesteps x num_features
         # TODO this is a magic number. Use metadata?
-        batch_predictions = batch_predictions.reshape(
-            num_batches, 30, 2
-        )
+        batch_predictions = batch_predictions.reshape(num_batches, 30, 2)
 
         return batch_predictions

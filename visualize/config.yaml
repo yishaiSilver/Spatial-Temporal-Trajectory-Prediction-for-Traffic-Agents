@@ -1,7 +1,7 @@
 model: 
   name: SimpleMLP
   device: cuda
-  hidden_size: [512, 1024, 1024, 1024, 1024, 512]
+  hidden_size: [1024, 2048, 2048, 2048, 2048, 1024]
   dropout: 0.2
 
 # config.yaml

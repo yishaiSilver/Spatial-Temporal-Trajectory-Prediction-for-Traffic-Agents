@@ -87,7 +87,7 @@ def collate(batch_data):
     inputs = torch.tensor(inputs, dtype=torch.float32)
 
     # TODO device
-    inputs.to("cuda")
+    inputs.to("cpu")
 
     # TODO convert to tensors
 
