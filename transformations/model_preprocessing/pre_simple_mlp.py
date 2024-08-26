@@ -82,7 +82,7 @@ class preSimpleMLP():
         inputs = vector
         labels = datum["p_out"][target_index]
         correction = datum["inverse"]
-        metadata = datum["homogenize_matrix"]
+        metadata = datum["metadata"]
         return inputs, labels, correction, metadata
 
     @staticmethod
