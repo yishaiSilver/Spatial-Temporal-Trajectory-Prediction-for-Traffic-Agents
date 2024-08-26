@@ -20,6 +20,7 @@ class preSimpleMLP:
         feat_agent_positions = features["p_in"]
         feat_agent_velocities = features["v_in"]
         feat_lanes = features["lane"]
+        feat_positional_embeddings = features["positional_embeddings"]
 
         # the MLP can only take in a flattened vector
         vector = []
@@ -83,12 +84,36 @@ class preSimpleMLP:
                 np.linalg.norm(lane - final_position, axis=1)
             )
 
-            for i in range(lane):
-                lane_position = lane[sorted_indices[i]]
-                lane_norm = lane_norms[sorted_indices[i]]
+            for i in range(feat_lanes):
+                if i >= len(sorted_indices):
+                    lane_position = np.zeros_like(lane[0])
+                    lane_norm = np.zeros_like(lane_norms[0])
+                else:
+                    lane_position = lane[sorted_indices[i]]
+                    lane_norm = lane_norms[sorted_indices[i]]
 
                 vector.extend(lane_position)
                 vector.extend(lane_norm)
+
+        # now that we've added all the features, we can add the positional 
+        # embeddings if needed
+        if feat_positional_embeddings > 0:
+            # get the positional embeddings
+            vector = np.array(vector)
+
+            new_vector = []
+
+            for i in range(feat_positional_embeddings):
+                s = np.sin(2**(i) * np.pi * vector)
+                c = np.cos(2**(i) * np.pi * vector)
+
+                # append the sin and cos to the new vector
+                new_vector.extend(s)
+                new_vector.extend(c)
+
+            new_vector = np.array(new_vector)
+
+            vector = new_vector.flatten()
 
         # inputs, labels, correction_function, and metadata
         inputs = vector

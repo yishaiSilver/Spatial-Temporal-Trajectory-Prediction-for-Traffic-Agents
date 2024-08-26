@@ -124,7 +124,17 @@ def apply(datum):
 
 
 def inverse(predictions, metadata):
-    """TODO: correct_predictions"""
+    """
+    Inverse the agent-centered transformation applied to the predictions:
+    takes in predicted offsets from network, returns them into the original 
+    world coordinate system.
+
+    TODO. Perhaps cumsum belongs to the model, not the transformation.
+
+    Args:
+        predictions (torch.Tensor): The predictions to be transformed.
+        metadata (dict): The metadata containing the target offset and rotation transforms.
+    """
 
     # IMPORTANT: inputs are batched
     batch_size = predictions.shape[0]

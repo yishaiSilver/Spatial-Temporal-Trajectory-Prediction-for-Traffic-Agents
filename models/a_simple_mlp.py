@@ -42,20 +42,24 @@ class SimpleMLP(nn.Module):
 
         # modify the input size in accordance with the inputs being used
         features = data_config["features"]
-        self.p_in = features["p_in"] + 1 # neighbors plus target
-        self.v_in = features["v_in"] # v is same # of agents as p
-        self.lane = features["lane"]
+        p_in = features["p_in"] + 1 # neighbors plus target
+        v_in = features["v_in"] # v is same # of agents as p
+        lane = features["lane"]
+        positional_embeddings = features["positional_embeddings"]
 
-        input_size += self.p_in * coord_dims * input_timesteps
-        input_size += self.v_in * coord_dims * input_timesteps
-        input_size += self.lane * 4 * input_timesteps # 4: x, y, dx, dy
+        input_size += p_in * coord_dims * input_timesteps
+        input_size += v_in * coord_dims * input_timesteps
+        input_size += lane * 4 # 4: x, y, dx, dy
+
+        # add the positional embeddings *if* they are being used
+        input_size *= positional_embeddings * 2 if positional_embeddings else 1
 
         # create the mlp
         self.mlp = MLP(input_size, hidden_size, output_size).float()
 
         self.mlp.to(self.device)
 
-        logger.info("Created MLP")
+        print(f"Created MLP with input size: {input_size}")
 
     def forward(self, x):
         """

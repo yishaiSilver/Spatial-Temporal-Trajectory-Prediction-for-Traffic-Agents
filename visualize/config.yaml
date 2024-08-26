@@ -21,5 +21,7 @@ data:
     p_in: 0
     v_in: 0 # should be same as p_in (num agents being considered)
 
+    positional_embeddings: 0
+
   transforms:
     - AgentCenter

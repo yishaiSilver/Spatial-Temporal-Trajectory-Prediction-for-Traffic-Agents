@@ -25,12 +25,16 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
         layers = []
 
+        # add a dropout
+        layers.append(nn.Dropout(0.1))
+
         dims = [input_dim] + hidden_dims + [output_dim]
 
         # Create the layers
         for i in range(len(dims) - 1):
             layers.append(nn.Linear(dims[i], dims[i + 1]))
-            layers.append(nn.ReLU())
+            # layers.append(nn.BatchNorm1d(dims[i + 1]))
+            layers.append(nn.LeakyReLU())
 
         # Remove the last ReLU
         layers.pop()

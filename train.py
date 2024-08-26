@@ -34,7 +34,7 @@ import tqdm
 COUNT_MOVING_AVERAGE = 250
 
 
-def train_epoch(model, optimizer, loss_fn, data_loader):
+def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
     """
     Trains the model for one epoch using the given optimizer, loss function, 
     and data loader.
@@ -48,6 +48,12 @@ def train_epoch(model, optimizer, loss_fn, data_loader):
     Returns:
         None
     """
+
+    # load the best model if we're not on the first epoch
+    if epoch != 0:
+        model_path = f"models/saved_weights/{model_config['name']}.pth"
+        model.load_state_dict(torch.load(model_path, weights_only=True))
+    
     model.train(True)
 
     device = model.device
@@ -70,11 +76,6 @@ def train_epoch(model, optimizer, loss_fn, data_loader):
 
         predictions = prediction_correction(predictions, metadata)
 
-        # print(predictions)
-        # print(labels)
-
-        # break
-
         loss = loss_fn(predictions, labels)
 
         loss.backward()
@@ -87,8 +88,11 @@ def train_epoch(model, optimizer, loss_fn, data_loader):
             first_loss = moving_avg_losses.pop(0)
             moving_avg_sum -= first_loss
 
+        moving_avg_mse = moving_avg_sum / len(moving_avg_losses)
+        moving_avg_rmse = np.sqrt(moving_avg_mse)
+
         iterator.set_postfix_str(
-            f"avg. loss={moving_avg_sum/len(moving_avg_losses):.5f}"
+            f"avg. loss={moving_avg_rmse:.5f}"
         )  # tod easy optimize
 
 
@@ -167,7 +171,7 @@ def main(main_config):
     # get the optimizer
     # optimizer_config = main_config['optimizer']
     optimizer = torch.optim.SGD(
-        model.parameters(), lr=0.001, momentum=0.1, weight_decay=0.001
+        model.parameters(), lr=0.0005, momentum=0.1, weight_decay=0.001
     )  # tod: magic line
 
     # get the loss
@@ -182,7 +186,7 @@ def main(main_config):
     for epoch in range(num_epochs):
         print(f"EPOCH {epoch}:")
 
-        train_epoch(model, optimizer, loss_fn, train_loader)
+        train_epoch(epoch, model, optimizer, loss_fn, train_loader, model_config)
         validation_loss = validate_epoch(model, loss_fn, val_loader)
 
         # save the model if it's the best
