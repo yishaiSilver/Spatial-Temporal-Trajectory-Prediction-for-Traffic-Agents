@@ -53,7 +53,7 @@ Let's try to discover the coordinate frame by plotting all of the values of p_in
 
 We get two cities, which must be why there is the `city` field for each scene. More importantly, if we were to naively use these positions as inputs, the equivalent would be:
 - *Driving with a GPS zoomed all the way out* 
-- *Driving while oriented towards north* 
+- *Driving while oriented in some arbitrary direction (presumably north)* 
 
 Maybe someone could do these things, but it's not practical, we don't do that,  and it doesn't make sense for us to impose these limitations on our network. Instead, let's put the world relative to us.
 
@@ -89,7 +89,6 @@ There's a couple challenges that we need to address:
 - Variable inputs:
     - The number of agents in the scene can vary.
     - The number of lane positions can vary.
-    - 
 - Spatial considerations
 
 Possible solutions (certainly not extensive, but we'll add as we go):
@@ -119,36 +118,46 @@ To start, let's validate our pipeline with a simple MLP. Moreover, we'll do a si
 
 <details><summary>Ablation Study</summary>
 
-| Ablation Study with MLP                                                                                      | RMSE | RMSE   |
+| Experiment Performed                                                                                    | Val. RMSE | Train RMSE   |
 |--------------------------------------------------------------------------------------------------------------|----------|--------|
 | MLP on just the (naive) positions of the ego agent                                                         | NaN     | NaN   |
-| MLP with the world transformed w.r.t the ego agent                                                          | 0.346     | 0.346   |
-| MLP with the world transformed w.r.t the ego agent, but with the lanes (and their normals)                 | ####     | ####   |
-| MLP with the world transformed w.r.t the ego agent, but with the n closest agents (0 padding where needed) | ####     | ####   |
-| MLP with the world transformed w.r.t the ego agent, but with the n closest agents and the lanes            | ####     | ####   |
-| MLP with the world transformed w.r.t the ego agent and the lanes, but with the lanes filtered by their normal | ####     | ####   |
-| MLP with the world transformed w.r.t the ego agent and the filtered lanes and the n closest agents         | ####     | ####   |
+| Transformed coordinates                          | 2.776 | 2.751 |
+| Transformed coordinates, 3 closest agents        | 3.562 | 3.517 |
+| Transformed coordinates, lanes                   | 3.107 | 3.100 |
+| Transformed coordinates, lanes, 3 closest agents | 3.339 | 3.437 |
+| The following experiments use positional embeddings (where L=3)   |||
+| Transformed coordinates                          | 3.175 | 3.451 |
+| Transformed coordinates, 3 closest agents        | 2.951 | 3.446 |
+| Transformed coordinates, lanes                   | 2.879 | 3.228 |
+| Transformed coordinates, lanes, 3 closest agents | 2.704 | 3.443 |
 
 </details>
 
-We can see that some transformation is required; we cannot simple use GPS-esque coordinates. The loss is just too large, even for floats. 
+- We can see that some transformation is required; we cannot simple use GPS-esque coordinates. The loss is just too large, even for floats. 
+- Another important thing to note is that the lanes outperform agents as supplementary data.
+- The positional embeddings seem to help. 
+    - This certainly justifies investing efforts into other ways of handling spatial data.
+    - Confusingly, the experiment with non-embedded transformed coordinates seemed to outperform almost every other experiment.
+    - Another important thing to note is that the ratio between training loss and validation loss is much more balanced without embeddings, which leads me to believe that the embeddings are overfitting the training data and may benefit from more regularization.
 
-At some point, we'll need to consider other transformations, but for the time being, I think our driver-centric world view is sufficient (after all, that's how we do it.)
+While the results of our simple MLP and data-engineering are great, we can see that it falls short in a few key areas: 
+
+<details><summary>Disapparance of Spatial Information</summary>
+One key drawback of the MLP is that -- due to predicting all output movements in one step -- we can only provide a single image of the lanes. This is not ideal as the lanes eprovide key information regarding where the agents are going at specific timesteps. Consider the following example:
+
+![A gif showing an animated scene in which the agent turns](visualize/images/failed_turn.gif)
+
+We can see that the output is generally in the correct direction, but since the network only has a vague idea of where the lanes are, it fails to correctly predict the agent's turn.
+
+A similar , more complicated challenge is that the positions of non-target agents are not given in the output. Lane positions can easily be inferred from the current/predicted position of the agent, but the positions of other agents cannot. 
+</details>
+
+### RNN
 
 
-### Lane Relevancy
+
+<!-- ### Lane Relevancy
 
 Now that we're including lanes, we should ask ourselves: "How relevant are lanes to the task at hand?"
 
-At first glance, the answer is "very," but, looking at the animation centered on the ego agent, we can see that not all lanes are created equal. In fact, the intersection is somewhat confusing in terms of which direction agents should be heading. As such, we'll perform an experiment where we filter out lanes positions where the normal is not sufficiently aligned with the ego agent's orientation.
-
-## Research
-- This is not a new problem, 
-
-## Visualization notes. 
-
-Ultimately, when the true purpose of our transformations are not to visualize the data, rather they are to correct whatever the output of the model is such that we can compare it to ground truth.  As such, my inverse functions, will not take in the datum; they will take in the singular vector of p_out for the agent/target and inverse it w.r.t. to the transformation that was applied. Then, once all inverses have been applied, we should be back in the world frame and our results should be similar to the original values of p_out.
-
-In order to visualize, we'll just run through the model and inverse the output. Though a great deal of data is lost, we'll simply have a parallel dataset without transformations, combine the two, and animate them.
-
-This strategy may not be the best, standerd, or even efficient with regards to visualization, but it's simple and it keeps the main goal in mind: to train the model efficiently.
+At first glance, the answer is "very," but, looking at the animation centered on the ego agent, we can see that not all lanes are created equal. In fact, the intersection is somewhat confusing in terms of which direction agents should be heading. As such, we'll perform an experiment where we filter out lanes positions where the normal is not sufficiently aligned with the ego agent's orientation. -->

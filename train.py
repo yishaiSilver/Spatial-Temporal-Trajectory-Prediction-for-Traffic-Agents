@@ -54,7 +54,7 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
         model_path = f"models/saved_weights/{model_config['name']}.pth"
         model.load_state_dict(torch.load(model_path, weights_only=True))
     
-    model.train(True)
+    # model.train(True)
 
     device = model.device
 
@@ -109,7 +109,7 @@ def validate_epoch(model, loss_fn, data_loader):
         float: The total validation loss for the epoch.
     """
 
-    model.eval()
+    # model.eval()
 
     device = model.device
 
@@ -171,7 +171,7 @@ def main(main_config):
     # get the optimizer
     # optimizer_config = main_config['optimizer']
     optimizer = torch.optim.SGD(
-        model.parameters(), lr=0.0005, momentum=0.1, weight_decay=0.001
+        model.parameters(), lr=0.0001, momentum=0.1, weight_decay=0.001
     )  # tod: magic line
 
     # get the loss
@@ -188,6 +188,9 @@ def main(main_config):
 
         train_epoch(epoch, model, optimizer, loss_fn, train_loader, model_config)
         validation_loss = validate_epoch(model, loss_fn, val_loader)
+
+        # MSE -> RMSE
+        validation_loss = np.sqrt(validation_loss)
 
         # save the model if it's the best
         if validation_loss < best_val_loss:

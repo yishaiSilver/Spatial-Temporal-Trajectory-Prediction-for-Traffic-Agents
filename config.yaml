@@ -21,6 +21,11 @@
 
 num_epochs: 20
 
+  # name: SimpleMLP
+  # device: cuda
+  # hidden_size: [4096, 2048, 4096, 2048, 4096, 1024]
+  # dropout: 0.2
+
 model: 
   name: SimpleMLP
   device: cuda
@@ -41,11 +46,11 @@ data:
   input_timesteps: 19
   output_timesteps: 30
   features:
-    lane: 20 # needs work
-    p_in: 3
+    lane: 0 # needs work
+    p_in: 0
     v_in: 0 # should be same as p_in (num agents being considered)
 
-    positional_embeddings: 3
+    positional_embeddings: 0
 
   transforms:
     - AgentCenter
