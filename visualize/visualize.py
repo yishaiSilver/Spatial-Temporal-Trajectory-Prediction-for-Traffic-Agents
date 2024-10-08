@@ -9,6 +9,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 
+import sys
+import os
+
+# Add the parent directory to the sys.path to find the data_loader module
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import data_loader.data_loaders as data
 
 colors = ["blue", "red", "green", "orange", "purple", "pink", "olive", "cyan"]

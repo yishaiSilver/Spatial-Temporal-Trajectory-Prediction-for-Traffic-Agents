@@ -5,6 +5,7 @@
 
 import transformations.agent_centered_transformations as AgentCenter
 from transformations.model_preprocessing.pre_simple_mlp import preSimpleMLP
+from transformations.model_preprocessing.pre_simple_rnn import preSimpleRNN
 
 
 class BaseTransformation:
@@ -34,6 +35,8 @@ class BaseTransformation:
         # inverse pass through whatever model-specific transformations are needed
         if model_name == "SimpleMLP":
             x = preSimpleMLP.inverse(x, meta)
+        elif model_name == "SimpleRNN":
+            x = preSimpleRNN.inverse(x, meta)
 
         # inverse pass through whatever model-agnostic transformations are needed
         if transforms is not None:
@@ -63,10 +66,13 @@ class BaseTransformation:
             # perform whatever additional transformations are needed
             if "AgentCenter" in transforms:
                 x = AgentCenter.apply(x)
+            
 
         # forward pass through whatever model-specific transformations are needed
         if model_name == "SimpleMLP":
             x = preSimpleMLP.apply(x, data_config)
+        elif model_name == "SimpleRNN":
+            x = preSimpleRNN.apply(x, data_config)
         return x
 
 

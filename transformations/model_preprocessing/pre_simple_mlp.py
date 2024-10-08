@@ -1,5 +1,5 @@
 import numpy as np
-
+from utils.logger_config import logger
 
 class preSimpleMLP:
     """
@@ -120,6 +120,9 @@ class preSimpleMLP:
         labels = datum["p_out"][target_index]
         correction = datum["inverse"]
         metadata = datum["metadata"]
+
+        # logger.debug(" Inputs shape: %s", inputs.shape)
+
         return inputs, labels, correction, metadata
 
     @staticmethod

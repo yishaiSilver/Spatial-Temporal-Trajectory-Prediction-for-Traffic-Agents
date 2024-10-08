@@ -19,12 +19,16 @@ import numpy as np
 import data_loader.data_loaders as data
 
 import logging
+import coloredlogs
 
 # import model.loss as module_loss
 # import model.metric as module_metric
 
 
 from models.a_simple_mlp import SimpleMLP
+from models.b_simple_rnn import SimpleRNN
+
+from utils.logger_config import logger
 
 # from trainer import Trainer
 # from utils import prepare_device
@@ -36,7 +40,7 @@ COUNT_MOVING_AVERAGE = 250
 
 def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
     """
-    Trains the model for one epoch using the given optimizer, loss function, 
+    Trains the model for one epoch using the given optimizer, loss function,
     and data loader.
 
     Args:
@@ -53,7 +57,7 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
     if epoch != 0:
         model_path = f"models/saved_weights/{model_config['name']}.pth"
         model.load_state_dict(torch.load(model_path, weights_only=True))
-    
+
     # model.train(True)
 
     device = model.device
@@ -118,7 +122,7 @@ def validate_epoch(model, loss_fn, data_loader):
     with torch.no_grad():
         for batch_data in iterator:
             inputs, labels, prediction_correction, metadata = batch_data
-            
+
             # move to the device
             inputs = tuple(input_tensor.to(device) for input_tensor in inputs)
             labels = labels.to(device)
@@ -165,7 +169,8 @@ def main(main_config):
 
     # Rest of the code...
     # get the model
-    model = SimpleMLP(model_config, data_config)  # TODO: magic line (sort of)
+    # model = SimpleMLP(model_config, data_config)  # TODO: magic line (sort of)
+    model = SimpleRNN(model_config, data_config)
     # switch to config file spec.
 
     # get the optimizer
@@ -184,9 +189,11 @@ def main(main_config):
 
     best_val_loss = np.inf
     for epoch in range(num_epochs):
-        print(f"EPOCH {epoch}:")
+        logger.info("EPOCH %d", epoch)
 
-        train_epoch(epoch, model, optimizer, loss_fn, train_loader, model_config)
+        train_epoch(
+            epoch, model, optimizer, loss_fn, train_loader, model_config
+        )
         validation_loss = validate_epoch(model, loss_fn, val_loader)
 
         # MSE -> RMSE
@@ -194,7 +201,9 @@ def main(main_config):
 
         # save the model if it's the best
         if validation_loss < best_val_loss:
-            print(f"Best Validation loss: {validation_loss}")
+            logger.info(
+                "Best Validation loss: %f, saving model...", validation_loss
+            )
             best_val_loss = validation_loss
             model_path = f"models/saved_weights/{model_config['name']}.pth"
             torch.save(model.state_dict(), model_path)

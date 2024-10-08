@@ -19,18 +19,24 @@
 # undo transform
 # loss
 
-num_epochs: 20
+num_epochs: 10
 
   # name: SimpleMLP
   # device: cuda
   # hidden_size: [4096, 2048, 4096, 2048, 4096, 1024]
   # dropout: 0.2
 
+# model: 
+#   name: SimpleRNN
+#   device: cuda
+#   hidden_size: [4096, 2048, 4096, 2048, 4096, 1024]
+#   dropout: 0.2
 model: 
-  name: SimpleMLP
+  name: SimpleRNN
   device: cuda
-  hidden_size: [4096, 2048, 4096, 2048, 4096, 1024]
-  dropout: 0.2
+  hidden_size: 256
+  num_layers: 4
+  dropout: 0.1
 
 # config.yaml
 data:
@@ -38,7 +44,7 @@ data:
   val_path: ./data/val_in
   batch_size: 64
   shuffle: true
-  num_workers: 8
+  num_workers: 12
 
   train_val_split: 0.8
 
