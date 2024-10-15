@@ -129,7 +129,9 @@ def inverse(predictions, metadata):
     takes in predicted offsets from network, returns them into the original 
     world coordinate system.
 
-    TODO. Perhaps cumsum belongs to the model, not the transformation.
+    # TODO: Perhaps cumsum belongs to the model, not the transformation.
+
+    # IMPORTANT: inputs are batched
 
     Args:
         predictions (torch.Tensor): The predictions to be transformed.

@@ -136,7 +136,7 @@ def create_data_loader(model_config, data_config, train=True, examine=False):
         batch_size=batch_size,
         collate_fn=collate,
         num_workers=num_workers,
-        multiprocessing_context="spawn",
+        multiprocessing_context="fork",
     )
 
     val_loader = DataLoader(
@@ -144,7 +144,7 @@ def create_data_loader(model_config, data_config, train=True, examine=False):
         batch_size=batch_size,
         collate_fn=collate,
         num_workers=num_workers,
-        multiprocessing_context="spawn",
+        multiprocessing_context="fork",
     )
 
     return train_loader, val_loader

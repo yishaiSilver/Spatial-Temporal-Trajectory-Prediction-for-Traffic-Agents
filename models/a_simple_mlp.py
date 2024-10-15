@@ -61,6 +61,7 @@ class SimpleMLP(nn.Module):
 
         print(f"Created MLP with input size: {input_size}")
 
+    @torch.compile()
     def forward(self, x):
         """
         Forward pass through the network.

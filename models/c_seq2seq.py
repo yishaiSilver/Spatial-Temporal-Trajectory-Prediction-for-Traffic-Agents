@@ -1,18 +1,13 @@
 """
 This file contains a wrapper for the MLP model. Starting simple.
 """
-import numpy as np
 
 import torch
 import torch.nn as nn
-import torch._dynamo
-torch._dynamo.config.suppress_errors = True
-
 
 from models.layers.mlp import MLP
 
 from utils.logger_config import logger
-
 
 class SimpleRNN(nn.Module):
     """
@@ -50,16 +45,14 @@ class SimpleRNN(nn.Module):
         p_in = features["p_in"] + 1  # neighbors plus target
         v_in = features["v_in"]  # v is same # of agents as p
         lane = features["lane"]
-        self.positional_embeddings = features["positional_embeddings"]
+        positional_embeddings = features["positional_embeddings"]
 
         input_size += p_in * coord_dims
         input_size += v_in * coord_dims
         input_size += lane * 4  # 4: x, y, dx, dy
 
         # add the positional embeddings *if* they are being used
-        input_size *= (
-            self.positional_embeddings * 2 if self.positional_embeddings else 1
-        )
+        input_size *= positional_embeddings * 2 if positional_embeddings else 1
 
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -78,34 +71,11 @@ class SimpleRNN(nn.Module):
 
         logger.debug(" Created RNN with input size: %d", input_size)
 
-
-    @torch.compile()
-    def get_positional_embeddings(self, x):
-        """
-        Get the positional embeddings for the input vector.
-        """
-        x_positional = torch.zeros(x.shape[0], x.shape[1], 0, device=self.device)
-        for i in range(self.positional_embeddings):
-            s = torch.sin(2**(i) * np.pi * x)
-            c = torch.cos(2**(i) * np.pi * x)
-
-            x_positional = torch.cat((x_positional, s), dim=2)
-            x_positional = torch.cat((x_positional, c), dim=2)
-
-        # change to device
-        x_positional = x_positional.to(self.device)
-
-        return x_positional
-
-    @torch.compile()
     def forward(self, x):
         """
         Forward pass through the network.
         """
-        x = torch.stack(x)  # b x timesteps x features
-
-        # get the positional embeddings
-        x = self.get_positional_embeddings(x)
+        x = torch.stack(x) # b x timesteps x features
 
         # initialize the hidden state
         hidden = None
@@ -125,10 +95,6 @@ class SimpleRNN(nn.Module):
 
             # add the output to the input, replacing the first element
             x_t = x_t.unsqueeze(1)
-
-            # get the positional embeddings
-            x_t = self.get_positional_embeddings(x_t)
-
             x = torch.cat((x, x_t), dim=1)
 
             # sliding window approach:

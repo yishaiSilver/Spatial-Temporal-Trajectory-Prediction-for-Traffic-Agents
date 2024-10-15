@@ -6,6 +6,7 @@
 import transformations.agent_centered_transformations as AgentCenter
 from transformations.model_preprocessing.pre_simple_mlp import preSimpleMLP
 from transformations.model_preprocessing.pre_simple_rnn import preSimpleRNN
+from transformations.model_preprocessing.pre_seq2seq import preSeq2Seq
 
 
 class BaseTransformation:
@@ -37,6 +38,8 @@ class BaseTransformation:
             x = preSimpleMLP.inverse(x, meta)
         elif model_name == "SimpleRNN":
             x = preSimpleRNN.inverse(x, meta)
+        elif model_name == "Seq2Seq":
+            x = preSeq2Seq.inverse(x, meta)
 
         # inverse pass through whatever model-agnostic transformations are needed
         if transforms is not None:
@@ -73,6 +76,8 @@ class BaseTransformation:
             x = preSimpleMLP.apply(x, data_config)
         elif model_name == "SimpleRNN":
             x = preSimpleRNN.apply(x, data_config)
+        elif model_name == "Seq2Seq":
+            x = preSeq2Seq.apply(x, data_config)
         return x
 
 

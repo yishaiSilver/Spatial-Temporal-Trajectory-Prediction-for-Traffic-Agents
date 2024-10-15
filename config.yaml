@@ -34,7 +34,7 @@ num_epochs: 10
 model: 
   name: SimpleRNN
   device: cuda
-  hidden_size: 256
+  hidden_size: 768
   num_layers: 4
   dropout: 0.1
 
@@ -42,11 +42,11 @@ model:
 data:
   train_path: ./data/train
   val_path: ./data/val_in
-  batch_size: 64
+  batch_size: 32
   shuffle: true
   num_workers: 12
 
-  train_val_split: 0.8
+  train_val_split: 0.9
 
   coord_dims: 2
   input_timesteps: 19
@@ -56,7 +56,7 @@ data:
     p_in: 0
     v_in: 0 # should be same as p_in (num agents being considered)
 
-    positional_embeddings: 0
+    positional_embeddings: 3
 
   transforms:
     - AgentCenter

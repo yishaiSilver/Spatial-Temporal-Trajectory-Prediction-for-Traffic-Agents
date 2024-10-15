@@ -119,6 +119,11 @@ def validate_epoch(model, loss_fn, data_loader):
 
     val_loss = 0.0
     iterator = tqdm.tqdm(data_loader, total=int(len(data_loader)))
+
+
+    moving_avg_sum = 0
+    moving_avg_losses = []
+
     with torch.no_grad():
         for batch_data in iterator:
             inputs, labels, prediction_correction, metadata = batch_data
@@ -135,6 +140,19 @@ def validate_epoch(model, loss_fn, data_loader):
             loss = loss_fn(outputs, labels)
 
             val_loss += loss.item()
+
+            moving_avg_losses.append(loss.item())
+            moving_avg_sum += loss.item()
+            if len(moving_avg_losses) > COUNT_MOVING_AVERAGE:
+                first_loss = moving_avg_losses.pop(0)
+                moving_avg_sum -= first_loss
+
+            moving_avg_mse = moving_avg_sum / len(moving_avg_losses)
+            moving_avg_rmse = np.sqrt(moving_avg_mse)
+
+            iterator.set_postfix_str(
+                f"avg. loss={moving_avg_rmse:.5f}"
+            )  # tod easy optimize
 
     return val_loss / len(data_loader)
 
@@ -202,11 +220,13 @@ def main(main_config):
         # save the model if it's the best
         if validation_loss < best_val_loss:
             logger.info(
-                "Best Validation loss: %f, saving model...", validation_loss
+                "\033[92mSaving. Val. loss: %f\033[0m", validation_loss
             )
             best_val_loss = validation_loss
             model_path = f"models/saved_weights/{model_config['name']}.pth"
             torch.save(model.state_dict(), model_path)
+        else:
+            logger.info("\033[91mNot saving. Val. loss: %f\033[0m", validation_loss)
 
 
 if __name__ == "__main__":
