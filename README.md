@@ -32,58 +32,57 @@ The description for the dataset is gives as follows:
     lane_norm- a (k, 2) numpy array of floats where 'k' is the number of lanes in the scene, representing the direction of each lane node
 ```
 
-## Explore a Scene
-For starters, let's create an animation consisting of the most basic information being provided: 
-- Lanes (constructed from their positions and norms) 
-- Agent positions and velocities (represented as points and arrows, respectively).
-
-![A gif showing an animated scene](visualize/images/simple_animation.gif)
-
-At this level, certain details emerge: 
-- What the heck is our coordinate frame? Why are our points plotted between such weird ranges
-- We can clearly make out an intersection. 
-- There is some interesting behaviors apparent in this one scene:
-    - The red agent waits for the olive agent to pass before performing a right-turn onto the main road.
-    - The olive agent changes lanes to overcome towards the left right as the input data stops and the output data begins.
-- The velocities are rather noisy; if we look at the bottom three agents, their velocity go all over the place despite them staying relatively still. If we are going to use velocity at all, we may need to filter it in some way.
-
-Let's try to discover the coordinate frame by plotting all of the values of p_in on a single plot:
+<details><summary>Amalgamated Data.</summary>
+For starters, we can see that the data is given in a global coordinate frame, which can generally be seen through the amalgamation of all lane positions:
 
 ![All of p_in plotted.](visualize/images/naive_positions.png)
 
-We get two cities, which must be why there is the `city` field for each scene. More importantly, if we were to naively use these positions as inputs, the equivalent would be:
-- *Driving with a GPS zoomed all the way out* 
-- *Driving while oriented in some arbitrary direction (presumably north)* 
+This is a bit confusing and it's hard to make out what's going on. Let's zoom in to the details of a specific scene.
 
-Maybe someone could do these things, but it's not practical, we don't do that,  and it doesn't make sense for us to impose these limitations on our network. Instead, let's put the world relative to us.
+</details>
 
-## Transforming the POV
+<details><summary>Single Scene</summary>
 
-### Position
-This is done easily by subtracting the ego agent's position from all of the other agents' positions.
+Looking at the data contained in a specifc scene, things begin to make more sense.
 
-### Orientation
+![A gif showing an animated scene](visualize/images/simple_animation.gif)
 
-This is a bit more tricky as the orientation of the agents is not given. Instead, we need to infer it.
+We can see that, although the data is in a global coordinate frame, we can clearly make out lanes and the agents. We can even see how some of the agents are interacting with eachother.
+
+Things are still odd, though. For starters, we're looking at this from the perspective of the olive agent that drives by the intersection, but that's not quickly apparent. For one, we're driving w.r.t. to a global coordinate frame with some arbitrary orientation. Let's try to transform the data to be more intuitive.
+</details>
+
+<details><summary>Using Coordinate Transformations to Make Data More Intuitive</summary>
+
+**Position:**
+
+This is done easily by subtracting the ego agent's position from all of the other scene information, thus centering the data on the agent. A more simple approach like subtracting the scene's minimum position from all scene positions may also work, but this would not be as intuitive; who among us drives by considering our positions relative to the street corner?
+
+**Orientation:**
 
 First Notes:
-- Due to the erratic velocity we saw earlier, we aren't going to rely on it for orientation, even though conceptually that's an extremely strong option. 
+
+- Due to the erratic velocities we saw earlier, we aren't going to rely on it for orientation, even though conceptually that's an extremely strong option. 
 - Even the positions are somewhat noisy, so without filtering, we might get a noisy orientation.
 - We can use the closest lane, but this may fail in the case of intersections (If you look at the olive agent, we can see that his orientation would be quite erratic, especially due to his lane change).
 - Perhaps we can use something like a kalman filter? Maybe a submodel that predicts the orientation based on the positions of the agents?
 
 To begin with, we'll use the angle between the first and last input positions. This approach will give stable results and is reasonable enough. It'll also make the network's job easier by providing a stable orientation (we only have to worry about the positional change of the ego agent). It also makes it easier to update lanes, since we only have to rotate them once.
 
+Another benefit of this is that it normalizes the vast majority of our ego agent's movements to be in a single direction, making the task easier and improving model explainability.
+
+</details>
+
+
 ### Results
+
+After having explored our data and transformed it to be more intuitive, we can clearly make out what's going on.
 
 ![A gif showing an animated scene](visualize/images/translated_to_agent.gif)
 
-The data is now much more intuitive. Asides from the static angle, we can see that this is not too different from how we might percieve the world while driving. Moreover, the input data is now more or less aligned in a single direction, which should make it easier for the network to learn; none of us  drive sideways, so why should we impose that on our network?
-
-One major note is that we need to transition from predicting positions to predicting displacements. As shown in the animation, the ego agent is always at the origin, so p_in becomes nothing but 0s. We can't infer anything from that, so we need to predict the change in position (which will still give us our movement in the world).
+One major note is that we need to transition from predicting positions to predicting displacements. As shown in the animation, the ego agent is always at the origin, so p_in becomes nothing but 0s. We can't infer anything about the agent's movement from that, so we need to predict the change in position.
 
 # Model considerations
-
 
 There's a couple challenges that we need to address:
 - Variable inputs:
