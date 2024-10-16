@@ -54,7 +54,7 @@ class SimpleRNN(nn.Module):
 
         input_size += p_in * coord_dims
         input_size += v_in * coord_dims
-        input_size += lane * 4  # 4: x, y, dx, dy
+        input_size += lane * 2  # 4: x, y, dx, dy
 
         # add the positional embeddings *if* they are being used
         input_size *= (
@@ -79,7 +79,7 @@ class SimpleRNN(nn.Module):
         logger.debug(" Created RNN with input size: %d", input_size)
 
 
-    @torch.compile()
+    # @torch.compile()
     def get_positional_embeddings(self, x):
         """
         Get the positional embeddings for the input vector.
@@ -96,13 +96,22 @@ class SimpleRNN(nn.Module):
         x_positional = x_positional.to(self.device)
 
         return x_positional
+    
+    
 
-    @torch.compile()
-    def forward(self, x):
+    # @torch.compile()
+    def forward(self, input):
         """
         Forward pass through the network.
         """
-        x = torch.stack(x)  # b x timesteps x features
+        x, lanes, other = input
+
+        # flatten lanes along last two dims
+        lane_t = lanes[:, -1]
+        lanes_f = lanes.view(lanes.size(0), lanes.size(1), -1)
+
+        # combine x and lanes_f
+        x = torch.cat((x, lanes_f), dim=2)
 
         # get the positional embeddings
         x = self.get_positional_embeddings(x)
@@ -118,7 +127,7 @@ class SimpleRNN(nn.Module):
 
             # get the last output
             x_t = x_t[:, -1, :]
-            x_t = self.fc(x_t)
+            x_t = self.fc(x_t) # b x coord dims
 
             # append the output
             outputs.append(x_t)
@@ -126,9 +135,16 @@ class SimpleRNN(nn.Module):
             # add the output to the input, replacing the first element
             x_t = x_t.unsqueeze(1)
 
+            # move lane_t by x_t, then add to the new vector
+            lane_t = lane_t - x_t
+            lane_t = lane_t.view(lane_t.size(0), -1).unsqueeze(1)
+            x_t = torch.cat((x_t, lane_t), dim=2)
+            lane_t = lane_t.view(lane_t.size(0), 10, 2)
+
             # get the positional embeddings
             x_t = self.get_positional_embeddings(x_t)
 
+            # add to the input of the next input
             x = torch.cat((x, x_t), dim=1)
 
             # sliding window approach:

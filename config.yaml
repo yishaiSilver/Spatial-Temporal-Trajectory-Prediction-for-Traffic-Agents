@@ -34,7 +34,7 @@ num_epochs: 10
 model: 
   name: SimpleRNN
   device: cuda
-  hidden_size: 768
+  hidden_size: 512
   num_layers: 4
   dropout: 0.1
 
@@ -52,7 +52,7 @@ data:
   input_timesteps: 19
   output_timesteps: 30
   features:
-    lane: 0 # needs work
+    lane: 20 # needs work
     p_in: 0
     v_in: 0 # should be same as p_in (num agents being considered)
 

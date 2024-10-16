@@ -62,40 +62,47 @@ def collate(batch_data):
         Tensor: Transformed batch data, ready for input to the model.
     """
 
-    batch_inputs = []
+    batch_inputs_pin = []
+    batch_inputs_lanes = []
+    batch_inputs_other = []
+
     batch_labels = []
     batch_prediction_correction = []
     batch_correction_metadata = []
 
     for datum in batch_data:
-        model_input, label, prediction_correction, metadata = datum
+        model_inputs, label, prediction_correction, metadata = datum
 
-        batch_inputs.append(model_input)
+        pin, lanes, other = model_inputs
+        batch_inputs_pin.append(pin)
+        if lanes is not None:
+            batch_inputs_lanes.append(lanes)
+        if other is not None:
+            batch_inputs_other.append(other)
+
         batch_labels.append(label)
         batch_prediction_correction.append(prediction_correction)
         batch_correction_metadata.append(metadata)
 
-    # print(batch_inputs)
+    pins = np.array(batch_inputs_pin)
+    pins = torch.tensor(pins, dtype=torch.float32)
+    if len(batch_inputs_lanes) != 0:
+        lanes = np.array(batch_inputs_lanes)
+        lanes = torch.tensor(lanes, dtype=torch.float32)
+    if len(batch_inputs_other) != 0:
+        other = np.array(batch_inputs_other)
+        other = torch.tensor(other, dtype=torch.float32)
 
-    inputs = np.array(batch_inputs)
+
+    inputs = (pins, lanes, other)
+
+    # convert all labels to tensors
     labels = np.array(batch_labels)
+    labels = torch.tensor(labels, dtype=torch.float32)
 
     # we only need one function reference because all data should have
     # the same correction function
     prediction_correction = batch_prediction_correction[0]
-
-    inputs = torch.tensor(inputs, dtype=torch.float32)
-
-    # TODO device
-    inputs.to("cpu")
-
-    # TODO convert to tensors
-
-    # convert all inputs to tensors
-    inputs = tuple(inputs)
-
-    # convert all labels to tensors
-    labels = torch.tensor(labels, dtype=torch.float32)
 
     return inputs, labels, prediction_correction, batch_correction_metadata
 

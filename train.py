@@ -70,8 +70,11 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
     for batch_data in iterator:
         inputs, labels, prediction_correction, metadata = batch_data
 
-        # move to the device
-        inputs = tuple(input_tensor.to(device) for input_tensor in inputs)
+        # inputs on device
+        inputs = tuple(
+            input_tensor.to(device) if input_tensor is not None else None 
+            for input_tensor in inputs
+        )
         labels = labels.to(device)
 
         optimizer.zero_grad()
@@ -119,7 +122,6 @@ def validate_epoch(model, loss_fn, data_loader):
 
     val_loss = 0.0
     iterator = tqdm.tqdm(data_loader, total=int(len(data_loader)))
-
 
     moving_avg_sum = 0
     moving_avg_losses = []
@@ -219,14 +221,14 @@ def main(main_config):
 
         # save the model if it's the best
         if validation_loss < best_val_loss:
-            logger.info(
-                "\033[92mSaving. Val. loss: %f\033[0m", validation_loss
-            )
+            logger.info("\033[92mSaving. Val. loss: %f\033[0m", validation_loss)
             best_val_loss = validation_loss
             model_path = f"models/saved_weights/{model_config['name']}.pth"
             torch.save(model.state_dict(), model_path)
         else:
-            logger.info("\033[91mNot saving. Val. loss: %f\033[0m", validation_loss)
+            logger.info(
+                "\033[91mNot saving. Val. loss: %f\033[0m", validation_loss
+            )
 
 
 if __name__ == "__main__":

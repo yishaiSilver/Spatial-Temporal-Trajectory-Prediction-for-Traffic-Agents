@@ -1,6 +1,8 @@
 import numpy as np
 from utils.logger_config import logger
 
+from transformations.lane_increment import increment_lanes_numpy
+
 
 class preSimpleRNN:
     """
@@ -35,10 +37,17 @@ class preSimpleRNN:
         # lanes?
 
         # inputs, labels, correction_function, and metadata
-        inputs = datum["p_in"][target_index]
+        inputs = [datum["p_in"][target_index], None, None]
         labels = datum["p_out"][target_index]
         correction = datum["inverse"]
         metadata = datum["metadata"]
+
+        if feat_lanes:
+            lanes = datum["lane"]
+            # TODO this should be its own transformation
+            lanes = increment_lanes_numpy(lanes, inputs[0])
+            lanes = lanes[:, :feat_lanes]
+            inputs[1] = lanes
 
         return inputs, labels, correction, metadata
 
