@@ -24,6 +24,12 @@ class TNet(nn.Module):
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, k * k)  # get the final tranformation matrix
 
+        self.bn1 = nn.BatchNorm1d(32)
+        self.bn2 = nn.BatchNorm1d(64)
+        self.bn3 = nn.BatchNorm1d(256)
+        self.bn4 = nn.BatchNorm1d(512)
+        self.bn5 = nn.BatchNorm1d(256)
+
         self.k = k
 
     def forward(self, x):
@@ -32,16 +38,15 @@ class TNet(nn.Module):
         """
         batchsize = x.shape[0]
 
-        x = F.leaky_relu(self.conv1(x))
-        x = F.leaky_relu(self.conv2(x))
-        x = F.leaky_relu(self.conv3(x))
-
+        x = F.leaky_relu(self.bn1(self.conv1(x)))
+        x = F.leaky_relu(self.bn2(self.conv2(x)))
+        x = F.leaky_relu(self.bn3(self.conv3(x)))
 
         num_points = x.size(2)
         x = nn.MaxPool1d(kernel_size=num_points)(x).view(batchsize, -1)
 
-        x = F.leaky_relu(self.fc1(x))
-        x = F.leaky_relu(self.fc2(x))
+        x = F.leaky_relu(self.bn4(self.fc1(x)))
+        x = F.leaky_relu(self.bn5(self.fc2(x)))
         x = self.fc3(x)
 
         np_identity = np.identity(self.k).astype(np.float32)
@@ -75,7 +80,15 @@ class PointNet(nn.Module):
         # shared mlp 2
         self.conv3 = nn.Conv1d(32, 32, kernel_size=1)
         self.conv4 = nn.Conv1d(32, 128, kernel_size=1)
-        self.conv5 = nn.Conv1d(128, 256, kernel_size=1) # 256 global feature size
+        self.conv5 = nn.Conv1d(
+            128, 256, kernel_size=1
+        )  # 256 global feature size
+
+        self.bn1 = nn.BatchNorm1d(32)
+        self.bn2 = nn.BatchNorm1d(32)
+        self.bn3 = nn.BatchNorm1d(32)
+        self.bn4 = nn.BatchNorm1d(128)
+        self.bn5 = nn.BatchNorm1d(256)
 
     def forward(self, x):
         """
@@ -88,22 +101,20 @@ class PointNet(nn.Module):
         x = torch.bmm(x.transpose(2, 1), first_matrix).transpose(2, 1)
 
         # go through first mlp
-        x = F.leaky_relu(self.conv1(x))
-        x = F.leaky_relu(self.conv2(x))
+        x = F.leaky_relu(self.bn1(self.conv1(x)))
+        x = F.leaky_relu(self.bn2(self.conv2(x)))
 
         # apply second transformation
         second_matrix = self.tnet2(x)
         x = torch.bmm(x.transpose(2, 1), second_matrix).transpose(2, 1)
-        
+
         # go through second mlp
-        x = F.leaky_relu(self.conv3(x))
-        x = F.leaky_relu(self.conv4(x))
-        x = F.leaky_relu(self.conv5(x))
+        x = F.leaky_relu(self.bn3(self.conv3(x)))
+        x = F.leaky_relu(self.bn4(self.conv4(x)))
+        x = F.leaky_relu(self.bn5(self.conv5(x)))
 
         # max pool
         num_points = x.size(2)
         x = nn.MaxPool1d(kernel_size=num_points)(x).view(batchsize, -1)
 
         return x
-
-

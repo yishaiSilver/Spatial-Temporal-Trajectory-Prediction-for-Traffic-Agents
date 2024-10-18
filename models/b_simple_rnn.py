@@ -169,7 +169,7 @@ class SimpleRNN(nn.Module):
             x_t = self.get_positional_embeddings(x_t)
 
             x_t = torch.cat((x_t, lane_t_embedded), dim=2)
-            lane_t = lane_t.view(lane_t.size(0), 10, 2)
+            lane_t = lane_t.view(lane_t.size(0), 15, 2)
 
             # add to the input of the next input
             x = torch.cat((x, x_t), dim=1)
