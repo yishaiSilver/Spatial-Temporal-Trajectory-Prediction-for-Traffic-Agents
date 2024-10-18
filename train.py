@@ -131,7 +131,10 @@ def validate_epoch(model, loss_fn, data_loader):
             inputs, labels, prediction_correction, metadata = batch_data
 
             # move to the device
-            inputs = tuple(input_tensor.to(device) for input_tensor in inputs)
+            inputs = tuple(
+                input_tensor.to(device) if input_tensor is not None else None 
+                for input_tensor in inputs
+            )
             labels = labels.to(device)
 
             outputs = model(inputs)

@@ -10,6 +10,7 @@ torch._dynamo.config.suppress_errors = True
 
 
 from models.layers.mlp import MLP
+from models.lanes.pointnet import PointNet
 
 from utils.logger_config import logger
 
@@ -54,12 +55,14 @@ class SimpleRNN(nn.Module):
 
         input_size += p_in * coord_dims
         input_size += v_in * coord_dims
-        input_size += lane * 2  # 4: x, y, dx, dy
+        # input_size += lane * 2  # 4: x, y, dx, dy
 
         # add the positional embeddings *if* they are being used
         input_size *= (
             self.positional_embeddings * 2 if self.positional_embeddings else 1
         )
+
+        input_size += 256
 
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -75,6 +78,8 @@ class SimpleRNN(nn.Module):
             device=self.device,
         )
         self.fc = nn.Linear(hidden_size, output_size, device=self.device)
+
+        self.pointnet = PointNet().to(self.device)
 
         logger.debug(" Created RNN with input size: %d", input_size)
 
@@ -97,7 +102,25 @@ class SimpleRNN(nn.Module):
 
         return x_positional
     
-    
+    def embed_lanes(self, lanes):
+        """
+        takes in 2d lanes and generates an embedding vector
+        """
+
+        # convert from batchsize x timesteps x points x dims
+        # to:          (batchsize * timesteps) x points x dims
+
+        b, t, p, d = lanes.shape
+
+        lanes = lanes.view(b*t, d, p) # reordering d and p
+
+        embeddings = self.pointnet(lanes)
+
+        # convert back to batchsize x timesteps x embedddings
+        embeddings = embeddings.view(b, t, -1)
+
+        return embeddings
+
 
     # @torch.compile()
     def forward(self, input):
@@ -106,15 +129,16 @@ class SimpleRNN(nn.Module):
         """
         x, lanes, other = input
 
-        # flatten lanes along last two dims
-        lane_t = lanes[:, -1]
-        lanes_f = lanes.view(lanes.size(0), lanes.size(1), -1)
 
-        # combine x and lanes_f
-        x = torch.cat((x, lanes_f), dim=2)
+        lane_t = lanes[:, -1]
+        lanes_embedded = self.embed_lanes(lanes)
+
 
         # get the positional embeddings
         x = self.get_positional_embeddings(x)
+        
+        # combine x and lanes_f
+        x = torch.cat((x, lanes_embedded), dim=2)
 
         # initialize the hidden state
         hidden = None
@@ -135,14 +159,17 @@ class SimpleRNN(nn.Module):
             # add the output to the input, replacing the first element
             x_t = x_t.unsqueeze(1)
 
+            # FIXME think about how to move the lane stuff to separate module
             # move lane_t by x_t, then add to the new vector
             lane_t = lane_t - x_t
-            lane_t = lane_t.view(lane_t.size(0), -1).unsqueeze(1)
-            x_t = torch.cat((x_t, lane_t), dim=2)
-            lane_t = lane_t.view(lane_t.size(0), 10, 2)
+            lane_t = lane_t.unsqueeze(1)
+            lane_t_embedded = self.embed_lanes(lane_t)
 
             # get the positional embeddings
             x_t = self.get_positional_embeddings(x_t)
+
+            x_t = torch.cat((x_t, lane_t_embedded), dim=2)
+            lane_t = lane_t.view(lane_t.size(0), 10, 2)
 
             # add to the input of the next input
             x = torch.cat((x, x_t), dim=1)

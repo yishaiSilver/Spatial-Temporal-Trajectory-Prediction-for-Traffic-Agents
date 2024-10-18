@@ -26,7 +26,7 @@ from transformations.base import BaseTransformation
 class ArgoverseDataset(Dataset):
     """Dataset class for Argoverse"""
 
-    def __init__(self, data_path: str, transform=None):
+    def __init__(self, data_path: str, transform=None, experimenting=0):
         """TODO: init"""
         super(ArgoverseDataset, self).__init__()
         self.data_path = data_path
@@ -34,6 +34,9 @@ class ArgoverseDataset(Dataset):
 
         self.pkl_list = glob(os.path.join(self.data_path, "*"))
         self.pkl_list.sort()
+
+        if experimenting > 0:
+            self.pkl_list = self.pkl_list[:experimenting]
 
     def __len__(self):
         """TODO: len"""
@@ -127,6 +130,7 @@ def create_data_loader(model_config, data_config, train=True, examine=False):
     dataset = ArgoverseDataset(
         data_path,
         transform=transform_function,
+        experimenting=data_config["experimenting"]
     )
 
     # use random_split to get the training and validation sets
