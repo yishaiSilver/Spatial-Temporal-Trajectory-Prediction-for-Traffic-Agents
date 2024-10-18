@@ -1,11 +1,13 @@
 """
 This file contains a wrapper for the MLP model. Starting simple.
 """
+
 import numpy as np
 
 import torch
 import torch.nn as nn
 import torch._dynamo
+
 torch._dynamo.config.suppress_errors = True
 
 
@@ -62,7 +64,7 @@ class SimpleRNN(nn.Module):
             self.positional_embeddings * 2 if self.positional_embeddings else 1
         )
 
-        input_size += 256
+        input_size += 128
 
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -81,18 +83,25 @@ class SimpleRNN(nn.Module):
 
         self.pointnet = PointNet().to(self.device)
 
-        logger.debug(" Created RNN with input size: %d", input_size)
-
+        logger.debug(
+            " Created RNN with input size: %d, on device %s",
+            input_size,
+            self.device,
+        )
 
     # @torch.compile()
     def get_positional_embeddings(self, x):
         """
         Get the positional embeddings for the input vector.
         """
-        x_positional = torch.zeros(x.shape[0], x.shape[1], 0, device=self.device)
+        x_positional = torch.zeros(x.shape[0], x.shape[1], 0, device=x.device)
         for i in range(self.positional_embeddings):
-            s = torch.sin(2**(i) * np.pi * x)
-            c = torch.cos(2**(i) * np.pi * x)
+            s = torch.sin(2 ** (i) * np.pi * x)
+            c = torch.cos(2 ** (i) * np.pi * x)
+
+            if x.is_cuda:
+                s = s.cuda()
+                c = c.cuda()
 
             x_positional = torch.cat((x_positional, s), dim=2)
             x_positional = torch.cat((x_positional, c), dim=2)
@@ -101,7 +110,7 @@ class SimpleRNN(nn.Module):
         x_positional = x_positional.to(self.device)
 
         return x_positional
-    
+
     def embed_lanes(self, lanes):
         """
         takes in 2d lanes and generates an embedding vector
@@ -112,15 +121,17 @@ class SimpleRNN(nn.Module):
 
         b, t, p, d = lanes.shape
 
-        lanes = lanes.view(b*t, d, p) # reordering d and p
+        lanes = lanes.view(b * t, d, p)  # reordering d and p
 
-        embeddings = self.pointnet(lanes)
+        embeddings, matrix = self.pointnet(lanes)
 
         # convert back to batchsize x timesteps x embedddings
         embeddings = embeddings.view(b, t, -1)
 
-        return embeddings
+        if lanes.is_cuda:
+            embeddings = embeddings.cuda()
 
+        return embeddings  # TODO return matrix, use normalization to encourage orthogonality
 
     # @torch.compile()
     def forward(self, input):
@@ -129,14 +140,12 @@ class SimpleRNN(nn.Module):
         """
         x, lanes, other = input
 
-
         lane_t = lanes[:, -1]
         lanes_embedded = self.embed_lanes(lanes)
 
-
         # get the positional embeddings
         x = self.get_positional_embeddings(x)
-        
+
         # combine x and lanes_f
         x = torch.cat((x, lanes_embedded), dim=2)
 
@@ -151,7 +160,7 @@ class SimpleRNN(nn.Module):
 
             # get the last output
             x_t = x_t[:, -1, :]
-            x_t = self.fc(x_t) # b x coord dims
+            x_t = self.fc(x_t)  # b x coord dims
 
             # append the output
             outputs.append(x_t)

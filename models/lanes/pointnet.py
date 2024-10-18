@@ -81,14 +81,14 @@ class PointNet(nn.Module):
         self.conv3 = nn.Conv1d(32, 32, kernel_size=1)
         self.conv4 = nn.Conv1d(32, 128, kernel_size=1)
         self.conv5 = nn.Conv1d(
-            128, 256, kernel_size=1
+            128, 128, kernel_size=1
         )  # 256 global feature size
 
         self.bn1 = nn.BatchNorm1d(32)
         self.bn2 = nn.BatchNorm1d(32)
         self.bn3 = nn.BatchNorm1d(32)
         self.bn4 = nn.BatchNorm1d(128)
-        self.bn5 = nn.BatchNorm1d(256)
+        self.bn5 = nn.BatchNorm1d(128)
 
     def forward(self, x):
         """
@@ -97,16 +97,16 @@ class PointNet(nn.Module):
         batchsize = x.shape[0]
 
         # apply first transformation
-        first_matrix = self.tnet1(x)
-        x = torch.bmm(x.transpose(2, 1), first_matrix).transpose(2, 1)
+        tm_1 = self.tnet1(x)
+        x = torch.bmm(x.transpose(2, 1), tm_1).transpose(2, 1)
 
         # go through first mlp
         x = F.leaky_relu(self.bn1(self.conv1(x)))
         x = F.leaky_relu(self.bn2(self.conv2(x)))
 
         # apply second transformation
-        second_matrix = self.tnet2(x)
-        x = torch.bmm(x.transpose(2, 1), second_matrix).transpose(2, 1)
+        tm_2 = self.tnet2(x)
+        x = torch.bmm(x.transpose(2, 1), tm_2).transpose(2, 1)
 
         # go through second mlp
         x = F.leaky_relu(self.bn3(self.conv3(x)))
@@ -117,4 +117,4 @@ class PointNet(nn.Module):
         num_points = x.size(2)
         x = nn.MaxPool1d(kernel_size=num_points)(x).view(batchsize, -1)
 
-        return x
+        return x, tm_1

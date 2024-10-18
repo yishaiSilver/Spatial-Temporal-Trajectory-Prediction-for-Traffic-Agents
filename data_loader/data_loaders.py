@@ -16,6 +16,8 @@ from torch.utils.data import Dataset, DataLoader
 
 from transformations.base import BaseTransformation
 
+from utils.logger_config import logger
+
 # from transformations.positions_to_displacements import PositionToDisplacement
 
 # number of sequences in each dataset
@@ -37,6 +39,8 @@ class ArgoverseDataset(Dataset):
 
         if experimenting > 0:
             self.pkl_list = self.pkl_list[:experimenting]
+
+        logger.debug("Loaded len %s dataset", len(self.pkl_list))
 
     def __len__(self):
         """TODO: len"""

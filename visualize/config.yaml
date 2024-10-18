@@ -4,7 +4,13 @@ model:
   # hidden_size: [1024, 2048, 2048, 2048, 2048, 1024]
   # dropout: 0.2
 
-  name: SimpleRNN
+  # name: SimpleRNN
+  # device: cpu
+  # hidden_size: 512
+  # num_layers: 3
+  # dropout: 0.2
+
+  name: Seq2Seq
   device: cuda
   hidden_size: 512
   num_layers: 3
@@ -12,10 +18,12 @@ model:
 
 # config.yaml
 data:
-  train_path: ./data/train
+  train_path: /media/ssilver/UbuntuShared/data/train
   batch_size: 1
   shuffle: false
   num_workers: 1
+
+  experimenting: 0 # set to 0 for full datasets
 
   train_val_split: 1.0
 
@@ -27,7 +35,7 @@ data:
     p_in: 0
     v_in: 0 # should be same as p_in (num agents being considered)
 
-    positional_embeddings: 0
+    positional_embeddings: 3
 
   transforms:
     - AgentCenter

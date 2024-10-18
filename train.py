@@ -27,6 +27,7 @@ import coloredlogs
 
 from models.a_simple_mlp import SimpleMLP
 from models.b_simple_rnn import SimpleRNN
+from models.c_seq2seq import Seq2Seq
 
 from utils.logger_config import logger
 
@@ -65,14 +66,18 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
     moving_avg_sum = 0
     moving_avg_losses = []
 
-    iterator = tqdm.tqdm(data_loader, total=int(len(data_loader)))
+    iterator = tqdm.tqdm(
+        data_loader,
+        total=int(len(data_loader)),
+        bar_format="{l_bar}{bar:50}{r_bar}{bar:-50b}", # broken laptop screen :/
+    )
 
     for batch_data in iterator:
         inputs, labels, prediction_correction, metadata = batch_data
 
         # inputs on device
         inputs = tuple(
-            input_tensor.to(device) if input_tensor is not None else None 
+            input_tensor.to(device) if input_tensor is not None else None
             for input_tensor in inputs
         )
         labels = labels.to(device)
@@ -99,7 +104,7 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
         moving_avg_rmse = np.sqrt(moving_avg_mse)
 
         iterator.set_postfix_str(
-            f"avg. loss={moving_avg_rmse:.5f}"
+            f"avg. RMSE={moving_avg_rmse:.5f}"
         )  # tod easy optimize
 
 
@@ -121,7 +126,11 @@ def validate_epoch(model, loss_fn, data_loader):
     device = model.device
 
     val_loss = 0.0
-    iterator = tqdm.tqdm(data_loader, total=int(len(data_loader)))
+    iterator = tqdm.tqdm(
+        data_loader,
+        total=int(len(data_loader)),
+        bar_format="{l_bar}{bar:50}{r_bar}{bar:-50b}",
+    )
 
     moving_avg_sum = 0
     moving_avg_losses = []
@@ -132,7 +141,7 @@ def validate_epoch(model, loss_fn, data_loader):
 
             # move to the device
             inputs = tuple(
-                input_tensor.to(device) if input_tensor is not None else None 
+                input_tensor.to(device) if input_tensor is not None else None
                 for input_tensor in inputs
             )
             labels = labels.to(device)
@@ -156,7 +165,7 @@ def validate_epoch(model, loss_fn, data_loader):
             moving_avg_rmse = np.sqrt(moving_avg_mse)
 
             iterator.set_postfix_str(
-                f"avg. loss={moving_avg_rmse:.5f}"
+                f"avg. RMSE={moving_avg_rmse:.5f}"
             )  # tod easy optimize
 
     return val_loss / len(data_loader)
@@ -193,13 +202,14 @@ def main(main_config):
     # Rest of the code...
     # get the model
     # model = SimpleMLP(model_config, data_config)  # TODO: magic line (sort of)
-    model = SimpleRNN(model_config, data_config)
+    # model = SimpleRNN(model_config, data_config)
+    model = Seq2Seq(model_config, data_config)
     # switch to config file spec.
 
     # get the optimizer
     # optimizer_config = main_config['optimizer']
     optimizer = torch.optim.SGD(
-        model.parameters(), lr=0.0001, momentum=0.1, weight_decay=0.001
+        model.parameters(), lr=0.00001, momentum=0.9, weight_decay=0.001
     )  # tod: magic line
 
     # get the loss
