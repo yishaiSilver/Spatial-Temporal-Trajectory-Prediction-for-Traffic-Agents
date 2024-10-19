@@ -43,10 +43,11 @@ class preSimpleRNN:
         metadata = datum["metadata"]
 
         if feat_lanes:
-            lanes = datum["lane"]
-            # TODO this should be its own transformation
-            lanes = increment_lanes_numpy(lanes, inputs[0])
-            lanes = lanes[:, :feat_lanes]
+            lanes = np.array(datum["lane"])
+            lane_norms = np.array(datum["lane_norm"])
+
+            # stack the lanes and lane norms
+            lanes = np.hstack((lanes, lane_norms))
             inputs[1] = lanes
 
         return inputs, labels, correction, metadata

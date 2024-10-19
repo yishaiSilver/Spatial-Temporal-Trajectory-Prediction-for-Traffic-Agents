@@ -1,11 +1,14 @@
+"""
+This file contains the implementation of the PointNet backbone used to encode
+the lanes.
+"""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
 import numpy as np
-
-from utils.logger_config import logger
 
 
 class TNet(nn.Module):
@@ -63,18 +66,22 @@ class TNet(nn.Module):
 
 
 class PointNet(nn.Module):
-    def __init__(self, *args, **kwargs):
+    """
+    The PointNet backbone being used to encode the lanes.
+    """
+
+    def __init__(self, input_dims=2):
         """
         initialization of pointnet.
         """
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         # transformation network
-        self.tnet1 = TNet(k=2)
+        self.tnet1 = TNet(k=input_dims)
         self.tnet2 = TNet(k=32)
 
         # shared mlp 1
-        self.conv1 = nn.Conv1d(2, 32, kernel_size=1)
+        self.conv1 = nn.Conv1d(input_dims, 32, kernel_size=1)
         self.conv2 = nn.Conv1d(32, 32, kernel_size=1)
 
         # shared mlp 2

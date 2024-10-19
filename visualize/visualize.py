@@ -30,7 +30,7 @@ def update_plot(timestep, scenes, axs, preds=None):
     Plots a scene to an axis at a given timestamp.
     """
 
-    for scene, ax in zip(scenes, axs):
+    for scene, ax, preds in zip(scenes, axs, preds):
         ax.clear()  # Clear the current plot
 
         timestamp = timestep
@@ -113,22 +113,19 @@ def update_plot(timestep, scenes, axs, preds=None):
         ax.set_aspect("equal")
 
 
-def animate(scene, preds=None, filename="animation.gif"):
+def animate(scenes, preds=None, filename="animation.gif"):
     """
     Animates a scene with optional predictions.
     """
-
-    fig, axs = plt.subplots(ncols=2)
-    num_timestamps = len(scene["p_in"][0]) + len(scene["p_out"][0])
-
-    scenes = [scene, scene]
+    fig, axs = plt.subplots(ncols=len(scenes), figsize=(5 * len(scenes), 10))
+    num_timestamps = len(scenes[0]["p_in"][0]) + len(scenes[0]["p_out"][0])
 
     ani = animation.FuncAnimation(
         fig,
         update_plot,
         frames=range(num_timestamps),
         fargs=(scenes, axs, preds),
-        interval=10,  # Time in milliseconds between frames
+        interval=20,  # Time in milliseconds between frames
         repeat=True,
     )
 
@@ -205,7 +202,13 @@ index = 40000  # great left turn
 # index = 1000 # slow down to avoid crash
 # index = 500 # odd scene with lots of entities
 
-visualization_scene = visualization_dataset[index]
-predictions = get_prediction(model_config, data_config, index)
+indices = [
+    100, 
+    40000,
+    5
+]
 
-animate(visualization_scene, predictions, filename="animation.gif")
+scenes = [visualization_dataset[i] for i in indices]
+predictions = [get_prediction(model_config, data_config, i) for i in indices]
+
+animate(scenes, predictions, filename="animation.gif")

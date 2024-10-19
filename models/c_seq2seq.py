@@ -93,7 +93,7 @@ class Seq2Seq(nn.Module):
 
         logger.debug(" Created Seq2Seq with input size: %d", input_size)
 
-    # @torch.compile()
+    @torch.compile()
     def get_positional_embeddings(self, x):
         """
         Get the positional embeddings for the input vector.
@@ -118,6 +118,7 @@ class Seq2Seq(nn.Module):
 
         return x_positional
 
+    @torch.compile()
     def embed_lanes(self, lanes):
         """
         takes in 2d lanes and generates an embedding vector
@@ -140,6 +141,7 @@ class Seq2Seq(nn.Module):
 
         return embeddings  # TODO return matrix, use normalization to encourage orthogonality
 
+    @torch.compile()
     def forward(self, input):
         """
         Forward pass through the network.

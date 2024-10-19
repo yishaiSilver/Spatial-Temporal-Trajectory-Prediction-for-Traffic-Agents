@@ -14,8 +14,6 @@ class incremental(nn.Module):
         """
         super().__init__(self)
 
-        
-
     def forward(self, x, lanes):
         """
         Forward function of module

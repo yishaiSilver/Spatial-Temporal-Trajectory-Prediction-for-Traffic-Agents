@@ -6,13 +6,10 @@ import numpy as np
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch._dynamo
 
-torch._dynamo.config.suppress_errors = True
-
-
-from models.layers.mlp import MLP
-from models.lanes.pointnet import PointNet
+from models.lanes.lane_encoder import LaneEncoder
 
 from utils.logger_config import logger
 
@@ -41,7 +38,6 @@ class SimpleRNN(nn.Module):
         self.input_timesteps = data_config["input_timesteps"]
         input_size = 0
         self.output_timesteps = data_config["output_timesteps"]
-        output_size = coord_dims
 
         # get the hidden size(s)
         hidden_size = model_config["hidden_size"]
@@ -61,7 +57,9 @@ class SimpleRNN(nn.Module):
 
         # add the positional embeddings *if* they are being used
         input_size *= (
-            self.positional_embeddings * 2 if self.positional_embeddings else 1
+            self.positional_embeddings * 2
+            if self.positional_embeddings > 0
+            else 1
         )
 
         input_size += 128
@@ -79,21 +77,26 @@ class SimpleRNN(nn.Module):
             batch_first=True,
             device=self.device,
         )
-        self.fc = nn.Linear(hidden_size, output_size, device=self.device)
+        self.fc1 = nn.Linear(hidden_size, hidden_size * 2, device=self.device)
+        self.fc2 = nn.Linear(hidden_size * 2, hidden_size, device=self.device)
+        self.fc3 = nn.Linear(hidden_size, coord_dims, device=self.device)
 
-        self.pointnet = PointNet().to(self.device)
+        self.lane_encoder = LaneEncoder().to(self.device)
 
         logger.debug(
-            " Created RNN with input size: %d, on device %s",
+            "\n Created RNN: \n\t Input size: %d \n\t Device: %s \n\t Parameters: %d",
             input_size,
             self.device,
+            sum(p.numel() for p in self.parameters()),
         )
 
-    # @torch.compile()
     def get_positional_embeddings(self, x):
         """
         Get the positional embeddings for the input vector.
         """
+        if self.positional_embeddings == 0:
+            return x
+
         x_positional = torch.zeros(x.shape[0], x.shape[1], 0, device=x.device)
         for i in range(self.positional_embeddings):
             s = torch.sin(2 ** (i) * np.pi * x)
@@ -111,43 +114,19 @@ class SimpleRNN(nn.Module):
 
         return x_positional
 
-    def embed_lanes(self, lanes):
-        """
-        takes in 2d lanes and generates an embedding vector
-        """
-
-        # convert from batchsize x timesteps x points x dims
-        # to:          (batchsize * timesteps) x points x dims
-
-        b, t, p, d = lanes.shape
-
-        lanes = lanes.view(b * t, d, p)  # reordering d and p
-
-        embeddings, matrix = self.pointnet(lanes)
-
-        # convert back to batchsize x timesteps x embedddings
-        embeddings = embeddings.view(b, t, -1)
-
-        if lanes.is_cuda:
-            embeddings = embeddings.cuda()
-
-        return embeddings  # TODO return matrix, use normalization to encourage orthogonality
-
-    # @torch.compile()
     def forward(self, input):
         """
         Forward pass through the network.
         """
         x, lanes, other = input
 
-        lane_t = lanes[:, -1]
-        lanes_embedded = self.embed_lanes(lanes)
+        lane_embeddings, matrix, lanes_t = self.lane_encoder(x, lanes)
 
         # get the positional embeddings
         x = self.get_positional_embeddings(x)
 
         # combine x and lanes_f
-        x = torch.cat((x, lanes_embedded), dim=2)
+        x = torch.cat((x, lane_embeddings), dim=2)
 
         # initialize the hidden state
         hidden = None
@@ -157,10 +136,13 @@ class SimpleRNN(nn.Module):
         for t in range(self.output_timesteps):
             # get the output
             x_t, hidden = self.rnn(x, hidden)
-
+            
             # get the last output
-            x_t = x_t[:, -1, :]
-            x_t = self.fc(x_t)  # b x coord dims
+            # x_t = x_t[:, -1, :]
+            x_t = hidden[-1]
+            x_t = F.leaky_relu(self.fc1(x_t))  # b x coord dims
+            x_t = F.leaky_relu(self.fc2(x_t))
+            x_t = self.fc3(x_t)
 
             # append the output
             outputs.append(x_t)
@@ -168,23 +150,17 @@ class SimpleRNN(nn.Module):
             # add the output to the input, replacing the first element
             x_t = x_t.unsqueeze(1)
 
-            # FIXME think about how to move the lane stuff to separate module
-            # move lane_t by x_t, then add to the new vector
-            lane_t = lane_t - x_t
-            lane_t = lane_t.unsqueeze(1)
-            lane_t_embedded = self.embed_lanes(lane_t)
-
             # get the positional embeddings
             x_t = self.get_positional_embeddings(x_t)
 
-            x_t = torch.cat((x_t, lane_t_embedded), dim=2)
-            lane_t = lane_t.view(lane_t.size(0), 15, 2)
+            lane_embeddings, matrix, lanes_t = self.lane_encoder(x_t, lanes_t)
+            x_t = torch.cat((x_t, lane_embeddings), dim=2)
 
             # add to the input of the next input
             x = torch.cat((x, x_t), dim=1)
 
             # sliding window approach:
-            # x = x[:, 1:, :]
+            x = x[:, -1:, :]
 
         # stack the outputs
         outputs = torch.stack(outputs, dim=1)

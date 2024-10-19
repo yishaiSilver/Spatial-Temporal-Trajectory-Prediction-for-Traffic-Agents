@@ -4,17 +4,18 @@ model:
   # hidden_size: [1024, 2048, 2048, 2048, 2048, 1024]
   # dropout: 0.2
 
-  # name: SimpleRNN
-  # device: cpu
+  
+  name: SimpleRNN
+  device: cpu
+  hidden_size: 512
+  num_layers: 4
+  dropout: 0.0
+
+  # name: Seq2Seq
+  # device: cuda
   # hidden_size: 512
   # num_layers: 3
   # dropout: 0.2
-
-  name: Seq2Seq
-  device: cuda
-  hidden_size: 512
-  num_layers: 3
-  dropout: 0.2
 
 # config.yaml
 data:
@@ -31,11 +32,11 @@ data:
   input_timesteps: 19
   output_timesteps: 30
   features:
-    lane: 15
+    lane: 0
     p_in: 0
     v_in: 0 # should be same as p_in (num agents being considered)
 
-    positional_embeddings: 3
+    positional_embeddings: 0
 
   transforms:
     - AgentCenter

@@ -14,27 +14,18 @@ Raises:
 import argparse
 import torch
 from torch import nn
-import torch.multiprocessing as tmp
 import numpy as np
+import yaml
+import tqdm
+
 import data_loader.data_loaders as data
 
-import logging
-import coloredlogs
-
-# import model.loss as module_loss
-# import model.metric as module_metric
-
-
-from models.a_simple_mlp import SimpleMLP
+# from models.a_simple_mlp import SimpleMLP
 from models.b_simple_rnn import SimpleRNN
-from models.c_seq2seq import Seq2Seq
+# from models.c_seq2seq import Seq2Seq
 
 from utils.logger_config import logger
 
-# from trainer import Trainer
-# from utils import prepare_device
-import yaml
-import tqdm
 
 COUNT_MOVING_AVERAGE = 250
 
@@ -69,22 +60,26 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
     iterator = tqdm.tqdm(
         data_loader,
         total=int(len(data_loader)),
-        bar_format="{l_bar}{bar:50}{r_bar}{bar:-50b}", # broken laptop screen :/
+        bar_format="{l_bar}{bar:50}{r_bar}{bar:-50b}",  # broken laptop screen :/
     )
 
     for batch_data in iterator:
         inputs, labels, prediction_correction, metadata = batch_data
 
         # inputs on device
-        inputs = tuple(
-            input_tensor.to(device) if input_tensor is not None else None
-            for input_tensor in inputs
-        )
+        input_tensors = []
+        for input_tensor in inputs:
+            if isinstance(input_tensor, list):
+                input_tensor = [inp.to(device) for inp in input_tensor]
+            elif input_tensor is not None:
+                input_tensor = input_tensor.to(device)
+            input_tensors.append(input_tensor)
+
         labels = labels.to(device)
 
         optimizer.zero_grad()
 
-        predictions = model(inputs)
+        predictions = model(input_tensors)
 
         predictions = prediction_correction(predictions, metadata)
 
@@ -106,6 +101,10 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
         iterator.set_postfix_str(
             f"avg. RMSE={moving_avg_rmse:.5f}"
         )  # tod easy optimize
+
+        if np.isnan(moving_avg_rmse):
+            logger.error("\033[91mNaN loss. Exiting.\033[0m")
+            exit(1)
 
 
 def validate_epoch(model, loss_fn, data_loader):
@@ -168,6 +167,10 @@ def validate_epoch(model, loss_fn, data_loader):
                 f"avg. RMSE={moving_avg_rmse:.5f}"
             )  # tod easy optimize
 
+            if np.isnan(moving_avg_rmse):
+                logger.error("\033[91mNaN loss. Exiting.\033[0m")
+                exit(1)
+
     return val_loss / len(data_loader)
 
 
@@ -183,12 +186,6 @@ def main(main_config):
         None
     """
 
-    # initialize logging
-    logging.basicConfig()
-
-    # initialize cuda multiprocessing to avoid error
-    # tmp.set_start_method('spawn', force=True)
-
     # get the configs
     data_config = main_config["data"]
     model_config = main_config["model"]
@@ -202,15 +199,19 @@ def main(main_config):
     # Rest of the code...
     # get the model
     # model = SimpleMLP(model_config, data_config)  # TODO: magic line (sort of)
-    # model = SimpleRNN(model_config, data_config)
-    model = Seq2Seq(model_config, data_config)
+    model = SimpleRNN(model_config, data_config)
+    # model = Seq2Seq(model_config, data_config)
     # switch to config file spec.
 
     # get the optimizer
     # optimizer_config = main_config['optimizer']
-    optimizer = torch.optim.SGD(
-        model.parameters(), lr=0.00001, momentum=0.9, weight_decay=0.001
-    )  # tod: magic line
+    # optimizer = torch.optim.SGD(
+    #     model.parameters(), lr=0.00005, momentum=0.9, weight_decay=0.001
+    # )  # todo: magic line
+
+    optimizer = torch.optim.Adam(
+        model.parameters(), lr=0.00005, weight_decay=0.001
+    )
 
     # get the loss
     # loss_config = main_config['loss']

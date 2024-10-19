@@ -94,12 +94,13 @@ def collate(batch_data):
     pins = np.array(batch_inputs_pin)
     pins = torch.tensor(pins, dtype=torch.float32)
     if len(batch_inputs_lanes) != 0:
-        lanes = np.array(batch_inputs_lanes)
-        lanes = torch.tensor(lanes, dtype=torch.float32)
+        lanes = [np.array(lane) for lane in batch_inputs_lanes]
+        lanes = [torch.tensor(lane, dtype=torch.float32) for lane in lanes]
+        # lanes = np.array(batch_inputs_lanes)
+        # lanes = torch.tensor(lanes, dtype=torch.float32)
     if len(batch_inputs_other) != 0:
         other = np.array(batch_inputs_other)
         other = torch.tensor(other, dtype=torch.float32)
-
 
     inputs = (pins, lanes, other)
 
@@ -114,7 +115,7 @@ def collate(batch_data):
     return inputs, labels, prediction_correction, batch_correction_metadata
 
 
-def create_data_loader(model_config, data_config, train=True, examine=False):
+def create_data_loader(model_config, data_config, train=True):
     """TODO: create_data_loader"""
     #   data_path: str, transforms=None, batch_size=4, shuffle=False, val_split=0.0, num_workers=1
     if train:
@@ -134,7 +135,7 @@ def create_data_loader(model_config, data_config, train=True, examine=False):
     dataset = ArgoverseDataset(
         data_path,
         transform=transform_function,
-        experimenting=data_config["experimenting"]
+        experimenting=data_config["experimenting"],
     )
 
     # use random_split to get the training and validation sets
