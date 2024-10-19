@@ -2,6 +2,7 @@
 A module used to filter out irrelevant lanes via angle.
 """
 import torch
+from utils.logger_config import logger
 
 def angle_filter(lanes):
     """
@@ -18,11 +19,9 @@ def angle_filter(lanes):
         lane_angles = torch.atan2(lane_norms[:, 1], lane_norms[:, 0])
 
         # since the agent is moving up, we want to filter out lanes that are
-        # going down (more than 90 degrees from 90 degrees)
-        mask = lane_angles > 0
-
-        # apply the mask
-        batch_lanes = batch_lanes[mask]
+        # going down (more than 90 degrees from 90 degrees)=
+        # FIXME shouldnt be 0, should be 90
+        batch_lanes = batch_lanes[lane_angles > 0]
 
         output.append(batch_lanes)
 

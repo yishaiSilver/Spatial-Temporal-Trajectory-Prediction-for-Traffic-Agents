@@ -17,6 +17,7 @@ from torch import nn
 import numpy as np
 import yaml
 import tqdm
+from torch.profiler import profile, record_function, ProfilerActivity
 
 import data_loader.data_loaders as data
 
@@ -63,6 +64,7 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
         bar_format="{l_bar}{bar:50}{r_bar}{bar:-50b}",  # broken laptop screen :/
     )
 
+    i = 0
     for batch_data in iterator:
         inputs, labels, prediction_correction, metadata = batch_data
 
@@ -78,6 +80,19 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
         labels = labels.to(device)
 
         optimizer.zero_grad()
+
+        if i > 10:
+            with profile(activities=[
+                        ProfilerActivity.CPU,
+                        ProfilerActivity.CUDA
+                        ], record_shapes=True) as prof:
+                    with record_function("model_inference"):
+                        outputs = model(input_tensors)
+
+            print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=20))
+
+            exit()
+        i += 1
 
         predictions = model(input_tensors)
 
@@ -145,7 +160,17 @@ def validate_epoch(model, loss_fn, data_loader):
             )
             labels = labels.to(device)
 
-            outputs = model(inputs)
+
+            with profile(activities=[
+                    ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+                with record_function("model_inference"):
+                    outputs = model(inputs)
+
+            print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=10))
+
+            exit()
+
+            # outputs = model(inputs)
 
             # postprocess the outputs
             outputs = prediction_correction(outputs, metadata)

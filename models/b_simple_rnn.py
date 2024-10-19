@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import torch._dynamo
 
 from models.lanes.lane_encoder import LaneEncoder
+from models.lanes.lane_preprocess import LanePreprocess
 
 from utils.logger_config import logger
 
@@ -81,7 +82,9 @@ class SimpleRNN(nn.Module):
         self.fc2 = nn.Linear(hidden_size * 2, hidden_size, device=self.device)
         self.fc3 = nn.Linear(hidden_size, coord_dims, device=self.device)
 
-        self.lane_encoder = LaneEncoder().to(self.device)
+        self.lane_preprocess = LanePreprocess()
+        self.lane_encoder = LaneEncoder()
+        self.lane_encoder.cuda()
 
         logger.debug(
             "\n Created RNN: \n\t Input size: %d \n\t Device: %s \n\t Parameters: %d",
@@ -120,7 +123,8 @@ class SimpleRNN(nn.Module):
         """
         x, lanes, other = input
 
-        lane_embeddings, matrix, lanes_t = self.lane_encoder(x, lanes)
+        lanes, lanes_t = self.lane_preprocess(x, lanes)
+        lane_embeddings, matrix = self.lane_encoder(x, lanes)
 
         # get the positional embeddings
         x = self.get_positional_embeddings(x)
@@ -153,14 +157,15 @@ class SimpleRNN(nn.Module):
             # get the positional embeddings
             x_t = self.get_positional_embeddings(x_t)
 
-            lane_embeddings, matrix, lanes_t = self.lane_encoder(x_t, lanes_t)
-            x_t = torch.cat((x_t, lane_embeddings), dim=2)
+            lanes, lanes_t = self.lane_preprocess(x_t, lanes_t)
+            lane_embeddings, matrix = self.lane_encoder(x_t, lanes)
+            x = torch.cat((x_t, lane_embeddings), dim=2)
 
             # add to the input of the next input
-            x = torch.cat((x, x_t), dim=1)
+            # x = torch.cat((x, x_t), dim=1)
 
             # sliding window approach:
-            x = x[:, -1:, :]
+            # x = x[:, -1:, :]
 
         # stack the outputs
         outputs = torch.stack(outputs, dim=1)
