@@ -97,6 +97,8 @@ class PointNet(nn.Module):
         self.bn4 = nn.BatchNorm1d(128)
         self.bn5 = nn.BatchNorm1d(128)
 
+        torch.set_float32_matmul_precision('high')
+
     def forward(self, x):
         """
         feed data through pointnet

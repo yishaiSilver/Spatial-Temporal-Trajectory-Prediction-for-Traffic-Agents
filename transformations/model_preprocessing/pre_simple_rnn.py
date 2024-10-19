@@ -1,8 +1,7 @@
 import numpy as np
 from utils.logger_config import logger
 
-from transformations.lane_increment import increment_lanes_numpy
-
+from models.lanes.lane_preprocess import LanePreprocess
 
 class preSimpleRNN:
     """
@@ -42,13 +41,26 @@ class preSimpleRNN:
         correction = datum["inverse"]
         metadata = datum["metadata"]
 
+        # logger.debug(f"inputs: {inputs[0].shape}")
+
         if feat_lanes:
             lanes = np.array(datum["lane"])
             lane_norms = np.array(datum["lane_norm"])
 
-            # stack the lanes and lane norms
-            lanes = np.hstack((lanes, lane_norms))
-            inputs[1] = lanes
+
+            lanes = [np.hstack((lanes, lane_norms))]
+            # stack the lanes and lane norms TODO
+            # lanes = [lanes]
+
+            # add batch dimension
+            x = inputs[0][np.newaxis, :, :]
+
+            # # preprocess the lanes
+            lanes, last_lane = LanePreprocess()(x, lanes)
+
+            # logger.debug(f"lanes: {lanes.shape}")
+
+            inputs[1] = (lanes[0], last_lane[0])
 
         return inputs, labels, correction, metadata
 

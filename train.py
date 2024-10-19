@@ -31,6 +31,32 @@ from utils.logger_config import logger
 COUNT_MOVING_AVERAGE = 250
 
 
+def move_inputs_to_device(inputs, device):
+    """
+    Move the inputs to the device.
+
+    Args:
+        inputs (list): List of inputs to be moved to the device.
+        device (torch.device): The device to move the inputs to.
+
+    Returns:
+        list: List of inputs moved to the device.
+    """
+    # FIXME there's gotta be a better way to do this
+    # inputs on device
+    input_tensors = []
+    for input_tensor in inputs:
+        # if its the lanes, it will appear as list[tensor]
+        if isinstance(input_tensor, list):
+            lanes = input_tensor[0].to(device)
+            final_lanes = [ip.to(device) for ip in input_tensor[1]]
+            input_tensor = (lanes, final_lanes)
+        elif input_tensor is not None:
+            input_tensor = input_tensor.to(device)
+
+        input_tensors.append(input_tensor)
+    return input_tensors
+
 def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
     """
     Trains the model for one epoch using the given optimizer, loss function,
@@ -68,15 +94,8 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
     for batch_data in iterator:
         inputs, labels, prediction_correction, metadata = batch_data
 
-        # inputs on device
-        input_tensors = []
-        for input_tensor in inputs:
-            if isinstance(input_tensor, list):
-                input_tensor = [inp.to(device) for inp in input_tensor]
-            elif input_tensor is not None:
-                input_tensor = input_tensor.to(device)
-            input_tensors.append(input_tensor)
-
+        
+        input_tensors = move_inputs_to_device(inputs, device)
         labels = labels.to(device)
 
         optimizer.zero_grad()
@@ -84,7 +103,7 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
         if i > 10:
             with profile(activities=[
                         ProfilerActivity.CPU,
-                        ProfilerActivity.CUDA
+                        # ProfilerActivity.CUDA
                         ], record_shapes=True) as prof:
                     with record_function("model_inference"):
                         outputs = model(input_tensors)
@@ -153,24 +172,20 @@ def validate_epoch(model, loss_fn, data_loader):
         for batch_data in iterator:
             inputs, labels, prediction_correction, metadata = batch_data
 
-            # move to the device
-            inputs = tuple(
-                input_tensor.to(device) if input_tensor is not None else None
-                for input_tensor in inputs
-            )
+            input_tensors = move_inputs_to_device(inputs, device) 
             labels = labels.to(device)
 
 
-            with profile(activities=[
-                    ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
-                with record_function("model_inference"):
-                    outputs = model(inputs)
+            # with profile(activities=[
+            #         ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+            #     with record_function("model_inference"):
+            #         outputs = model(inputs)
 
-            print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=10))
+            # print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=10))
 
-            exit()
+            # exit()
 
-            # outputs = model(inputs)
+            outputs = model(input_tensors)
 
             # postprocess the outputs
             outputs = prediction_correction(outputs, metadata)
@@ -234,8 +249,17 @@ def main(main_config):
     #     model.parameters(), lr=0.00005, momentum=0.9, weight_decay=0.001
     # )  # todo: magic line
 
+    lr = 0.0001
+    weight_decay = 0.001
+
     optimizer = torch.optim.Adam(
-        model.parameters(), lr=0.00005, weight_decay=0.001
+        model.parameters(), lr=lr, weight_decay=weight_decay
+    )
+
+    logger.debug(
+        "\n Created Optimizer: \n\t Learning rate: %f \n\t Weight decay: %f",
+        lr,
+        weight_decay,
     )
 
     # get the loss

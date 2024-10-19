@@ -94,10 +94,17 @@ def collate(batch_data):
     pins = np.array(batch_inputs_pin)
     pins = torch.tensor(pins, dtype=torch.float32)
     if len(batch_inputs_lanes) != 0:
-        lanes = [np.array(lane) for lane in batch_inputs_lanes]
-        lanes = [torch.tensor(lane, dtype=torch.float32) for lane in lanes]
-        # lanes = np.array(batch_inputs_lanes)
-        # lanes = torch.tensor(lanes, dtype=torch.float32)
+        # lanes = [np.array(lane) for lane in batch_inputs_lanes]
+        # lanes = [torch.tensor(lane, dtype=torch.float32) for lane in lanes]
+        lanes = []
+        final_lanes = []
+        for lane, final_lane in batch_inputs_lanes:
+            lanes.append(torch.tensor(lane, dtype=torch.float32))
+            final_lanes.append(torch.tensor(final_lane, dtype=torch.float32))
+
+        lanes = torch.stack(lanes)
+        lanes = (lanes, final_lanes)
+
     if len(batch_inputs_other) != 0:
         other = np.array(batch_inputs_other)
         other = torch.tensor(other, dtype=torch.float32)
@@ -153,6 +160,7 @@ def create_data_loader(model_config, data_config, train=True):
         collate_fn=collate,
         num_workers=num_workers,
         multiprocessing_context="fork",
+        pin_memory=True,
     )
 
     val_loader = DataLoader(

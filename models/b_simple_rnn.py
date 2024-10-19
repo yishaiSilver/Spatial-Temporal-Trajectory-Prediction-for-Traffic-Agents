@@ -49,7 +49,7 @@ class SimpleRNN(nn.Module):
         features = data_config["features"]
         p_in = features["p_in"] + 1  # neighbors plus target
         v_in = features["v_in"]  # v is same # of agents as p
-        lane = features["lane"]
+        # lane = features["lane"]
         self.positional_embeddings = features["positional_embeddings"]
 
         input_size += p_in * coord_dims
@@ -93,6 +93,7 @@ class SimpleRNN(nn.Module):
             sum(p.numel() for p in self.parameters()),
         )
 
+    @torch.compile()
     def get_positional_embeddings(self, x):
         """
         Get the positional embeddings for the input vector.
@@ -112,19 +113,25 @@ class SimpleRNN(nn.Module):
             x_positional = torch.cat((x_positional, s), dim=2)
             x_positional = torch.cat((x_positional, c), dim=2)
 
+        # get rid of any gradient tracking
+        x_positional = x_positional.detach()
+
         # change to device
         x_positional = x_positional.to(self.device)
 
         return x_positional
 
-    def forward(self, input):
+    def forward(self, x):
         """
         Forward pass through the network.
         """
-        x, lanes, other = input
+        x, lanes, _ = x
 
-        lanes, lanes_t = self.lane_preprocess(x, lanes)
-        lane_embeddings, matrix = self.lane_encoder(x, lanes)
+        # to make better use of parallelism, we preprocess lanes belonging
+        # to input timesteps as part of the transformation pipeline
+        # therefore, we just unpack the lanes here
+        lanes, lanes_t = lanes
+        lane_embeddings, _ = self.lane_encoder(x, lanes)
 
         # get the positional embeddings
         x = self.get_positional_embeddings(x)
@@ -137,10 +144,10 @@ class SimpleRNN(nn.Module):
 
         outputs = []
 
-        for t in range(self.output_timesteps):
+        for _ in range(self.output_timesteps):
             # get the output
             x_t, hidden = self.rnn(x, hidden)
-            
+
             # get the last output
             # x_t = x_t[:, -1, :]
             x_t = hidden[-1]
@@ -157,15 +164,11 @@ class SimpleRNN(nn.Module):
             # get the positional embeddings
             x_t = self.get_positional_embeddings(x_t)
 
+            # now we need to update the lane information
             lanes, lanes_t = self.lane_preprocess(x_t, lanes_t)
-            lane_embeddings, matrix = self.lane_encoder(x_t, lanes)
+            lane_embeddings, _ = self.lane_encoder(x_t, lanes)
+
             x = torch.cat((x_t, lane_embeddings), dim=2)
-
-            # add to the input of the next input
-            # x = torch.cat((x, x_t), dim=1)
-
-            # sliding window approach:
-            # x = x[:, -1:, :]
 
         # stack the outputs
         outputs = torch.stack(outputs, dim=1)

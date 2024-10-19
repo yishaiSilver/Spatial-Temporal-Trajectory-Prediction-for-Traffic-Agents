@@ -45,7 +45,7 @@ data:
   
   train_path: /media/ssilver/UbuntuShared/data/train
   val_path: /media/ssilver/UbuntuShared/data/val_in
-  batch_size: 32
+  batch_size: 33
   shuffle: true
   num_workers: 12
 

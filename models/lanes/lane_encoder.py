@@ -1,7 +1,11 @@
-import torch
+"""
+A module used to generate encodings for a list of lanes.
+"""
+
 import torch.nn as nn
 
 from models.lanes.pointnet import PointNet
+
 
 class LaneEncoder(nn.Module):
     """
@@ -47,8 +51,10 @@ class LaneEncoder(nn.Module):
         lanes = lanes.view(b * t, d, p)  # reordering d and p
 
         # track gradients only for the pointnet call
-        with torch.no_grad():
-            lanes = lanes.clone()
+        lanes = lanes.detach()
+
+        if x.is_cuda:
+            lanes = lanes.cuda()
 
         # get the embeddings
         embeddings, matrix = self.pointnet(lanes)
