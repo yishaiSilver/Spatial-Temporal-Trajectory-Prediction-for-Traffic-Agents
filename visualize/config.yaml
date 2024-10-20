@@ -24,7 +24,7 @@ data:
   shuffle: false
   num_workers: 1
 
-  experimenting: 10000 # set to 0 for full datasets
+  experimenting: 0 # set to 0 for full datasets
 
   train_val_split: 1.0
 

@@ -169,6 +169,7 @@ def create_data_loader(model_config, data_config, train=True):
         collate_fn=collate,
         num_workers=num_workers,
         multiprocessing_context="fork",
+        pin_memory=True,
     )
 
     return train_loader, val_loader

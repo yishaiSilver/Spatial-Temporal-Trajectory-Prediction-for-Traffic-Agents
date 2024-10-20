@@ -39,7 +39,8 @@ class BaseTransformation:
         elif model_name == "SimpleRNN":
             x = preSimpleRNN.inverse(x, meta)
         elif model_name == "Seq2Seq":
-            x = preSeq2Seq.inverse(x, meta)
+            # x = preSeq2Seq.inverse(x, meta)
+            x = preSimpleRNN.inverse(x, meta)
 
         # inverse pass through whatever model-agnostic transformations are needed
         if transforms is not None:
@@ -77,7 +78,8 @@ class BaseTransformation:
         elif model_name == "SimpleRNN":
             x = preSimpleRNN.apply(x, data_config)
         elif model_name == "Seq2Seq":
-            x = preSeq2Seq.apply(x, data_config)
+            # x = preSeq2Seq.apply(x, data_config)
+            x = preSimpleRNN.apply(x, data_config)
         return x
 
 

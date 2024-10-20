@@ -33,7 +33,7 @@ num_epochs: 10
 #   dropout: 0.2
 
 model: 
-  name: SimpleRNN
+  name: Seq2Seq
   device: cuda
   hidden_size: 512
   num_layers: 4
@@ -45,7 +45,7 @@ data:
   
   train_path: /media/ssilver/UbuntuShared/data/train
   val_path: /media/ssilver/UbuntuShared/data/val_in
-  batch_size: 33
+  batch_size: 32
   shuffle: true
   num_workers: 12
 

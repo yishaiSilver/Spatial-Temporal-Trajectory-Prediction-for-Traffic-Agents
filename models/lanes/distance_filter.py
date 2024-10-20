@@ -5,8 +5,6 @@ A module used to filter out irrelevant lanes by distance.
 import torch
 import numpy as np
 
-from utils.logger_config import logger
-
 
 def distance_filter_and_pad(lanes, padded=30):
     """
@@ -57,12 +55,12 @@ def distance_filter_and_pad(lanes, padded=30):
                 )
                 batch_lanes = torch.cat((batch_lanes, zero_pads), dim=1)
             else:
-                # FIXME this is the slowest part of the model
+                #. FIXME this is the slowest part of the model
                 # Sort distances and get indices of the closest lanes
                 # sorted_indices_arg = torch.argsort(distances, dim=1)[:, :padded]
 
                 # the following is faster than argsort
-                sorted_distances, sorted_indices = torch.sort(distances, dim=1)
+                _, sorted_indices = torch.sort(distances, dim=1)
                 sorted_indices = sorted_indices[:, :padded]
 
                 # Gather the closest lanes

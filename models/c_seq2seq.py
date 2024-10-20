@@ -4,11 +4,15 @@ This file contains a wrapper for the MLP model. Starting simple.
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 import numpy as np
 
 from models.lanes.pointnet import PointNet
 from models.layers.mlp import MLP
+
+from models.lanes.lane_encoder import LaneEncoder
+from models.lanes.lane_preprocess import LanePreprocess
 
 from utils.logger_config import logger
 
@@ -59,7 +63,7 @@ class Seq2Seq(nn.Module):
             self.positional_embeddings * 2 if self.positional_embeddings else 1
         )
 
-        # input_size += 128
+        input_size += 128
 
         # add the positional embeddings *if* they are being used
         # input_size *= positional_embeddings * 2 if positional_embeddings else 1
@@ -87,11 +91,22 @@ class Seq2Seq(nn.Module):
             device=self.device,
         )
 
-        self.fc = nn.Linear(hidden_size, output_size, device=self.device)
+        self.fc1 = nn.Linear(hidden_size, hidden_size * 2, device=self.device)
+        self.fc2 = nn.Linear(hidden_size * 2, hidden_size*3, device=self.device)
+        self.fc3 = nn.Linear(hidden_size * 3, hidden_size*2, device=self.device)
+        self.fc4 = nn.Linear(hidden_size * 2, hidden_size*2, device=self.device)
+        self.fc5 = nn.Linear(hidden_size*2, coord_dims, device=self.device)
 
-        self.pointnet = PointNet().to(self.device)
+        self.lane_preprocess = LanePreprocess()
+        self.lane_encoder = LaneEncoder()
+        self.lane_encoder.cuda()
 
-        logger.debug(" Created Seq2Seq with input size: %d", input_size)
+        logger.debug(
+            "\n Created Seq2Seq: \n\t Input size: %d \n\t Device: %s \n\t Parameters: %d",
+            input_size,
+            self.device,
+            sum(p.numel() for p in self.parameters()),
+        )
 
     @torch.compile()
     def get_positional_embeddings(self, x):
@@ -141,38 +156,45 @@ class Seq2Seq(nn.Module):
 
         return embeddings  # TODO return matrix, use normalization to encourage orthogonality
 
-    @torch.compile()
     def forward(self, input):
         """
         Forward pass through the network.
         """
         x, lanes, other = input
 
-        # lane_t = lanes[:, -1]
-        # lanes_embedded = self.embed_lanes(lanes)
+        # to make better use of parallelism, we preprocess lanes belonging
+        # to input timesteps as part of the transformation pipeline
+        # therefore, we just unpack the lanes here
+        lanes, lanes_t = lanes
+        lane_embeddings, _ = self.lane_encoder(x, lanes)
 
         # get the positional embeddings
         x = self.get_positional_embeddings(x)
 
         # combine x and lanes_f
-        # x = torch.cat((x, lanes_embedded), dim=2)
+        x = torch.cat((x, lane_embeddings), dim=2)
 
         # encode the input
         hidden = None
         _, hidden = self.encoder_rnn(x, hidden)
 
         # get the last position
-        x = x[:, -1, :].unsqueeze(1)
+        x_inp = x[:, -1, :].unsqueeze(1)
 
         # decode the output
         outputs = []
         for _ in range(self.output_timesteps):
             # get the output
-            x_t, hidden = self.decoder_rnn(x, hidden)
+            x_t, hidden = self.decoder_rnn(x_inp, hidden)
 
             # get the last output
-            x_t = x_t[:, -1, :]
-            x_t = self.fc(x_t)  # b x coord dims
+            # x_t = x_t[:, -1, :]
+            x_t = hidden[-1]
+            x_t = F.leaky_relu(self.fc1(x_t))  # b x coord dims
+            x_t = F.leaky_relu(self.fc2(x_t))
+            x_t = F.leaky_relu(self.fc3(x_t))
+            x_t = F.leaky_relu(self.fc4(x_t))
+            x_t = self.fc5(x_t)
 
             # append the output
             outputs.append(x_t)
@@ -180,19 +202,14 @@ class Seq2Seq(nn.Module):
             # add the output to the input, replacing the first element
             x_t = x_t.unsqueeze(1)
 
-            # # move lane_t by x_t, then add to the new vector
-            # lane_t = lane_t - x_t
-            # lane_t = lane_t.unsqueeze(1)
-            # lane_t_embedded = self.embed_lanes(lane_t)
-
             # get the positional embeddings
             x_t = self.get_positional_embeddings(x_t)
 
-            # x_t = torch.cat((x_t, lane_t_embedded), dim=2)
-            # lane_t = lane_t.view(lane_t.size(0), 15, 2)
+            # now we need to update the lane information
+            lanes, lanes_t = self.lane_preprocess(x_t, lanes_t)
+            lane_embeddings, _ = self.lane_encoder(x_t, lanes)
 
-            # update to the new input
-            x = x_t
+            x = torch.cat((x_t, lane_embeddings), dim=2)
 
         # stack the outputs
         outputs = torch.stack(outputs, dim=1)

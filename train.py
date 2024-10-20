@@ -22,13 +22,13 @@ from torch.profiler import profile, record_function, ProfilerActivity
 import data_loader.data_loaders as data
 
 # from models.a_simple_mlp import SimpleMLP
-from models.b_simple_rnn import SimpleRNN
-# from models.c_seq2seq import Seq2Seq
+# from models.b_simple_rnn import SimpleRNN
+from models.c_seq2seq import Seq2Seq
 
 from utils.logger_config import logger
 
 
-COUNT_MOVING_AVERAGE = 250
+COUNT_MOVING_AVERAGE = 1000
 
 
 def move_inputs_to_device(inputs, device):
@@ -42,6 +42,7 @@ def move_inputs_to_device(inputs, device):
     Returns:
         list: List of inputs moved to the device.
     """
+
     # FIXME there's gotta be a better way to do this
     # inputs on device
     input_tensors = []
@@ -100,18 +101,18 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
 
         optimizer.zero_grad()
 
-        if i > 10:
-            with profile(activities=[
-                        ProfilerActivity.CPU,
-                        # ProfilerActivity.CUDA
-                        ], record_shapes=True) as prof:
-                    with record_function("model_inference"):
-                        outputs = model(input_tensors)
+        # if i > 10:
+        #     with profile(activities=[
+        #                 ProfilerActivity.CPU,
+        #                 # ProfilerActivity.CUDA
+        #                 ], record_shapes=True) as prof:
+        #             with record_function("model_inference"):
+        #                 outputs = model(input_tensors)
 
-            print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=20))
+        #     print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=20))
 
-            exit()
-        i += 1
+        #     exit()
+        # i += 1
 
         predictions = model(input_tensors)
 
@@ -172,7 +173,7 @@ def validate_epoch(model, loss_fn, data_loader):
         for batch_data in iterator:
             inputs, labels, prediction_correction, metadata = batch_data
 
-            input_tensors = move_inputs_to_device(inputs, device) 
+            input_tensors = move_inputs_to_device(inputs, device)
             labels = labels.to(device)
 
 
@@ -239,8 +240,8 @@ def main(main_config):
     # Rest of the code...
     # get the model
     # model = SimpleMLP(model_config, data_config)  # TODO: magic line (sort of)
-    model = SimpleRNN(model_config, data_config)
-    # model = Seq2Seq(model_config, data_config)
+    # model = SimpleRNN(model_config, data_config)
+    model = Seq2Seq(model_config, data_config)
     # switch to config file spec.
 
     # get the optimizer
@@ -250,7 +251,7 @@ def main(main_config):
     # )  # todo: magic line
 
     lr = 0.0001
-    weight_decay = 0.001
+    weight_decay = 0.0
 
     optimizer = torch.optim.Adam(
         model.parameters(), lr=lr, weight_decay=weight_decay
