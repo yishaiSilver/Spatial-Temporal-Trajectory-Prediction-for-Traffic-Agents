@@ -14,13 +14,13 @@ class LanePreprocess:
     A module that manages how the lanes get preprocessed.
     """
 
-    def __init__(self):
+    def __init__(self, num_points):
         """
         Initializes the LanePreprocess module.
         """
         self.angle_filter = True
         self.distance_filter = True
-        self.num_padded = 20
+        self.num_points = 20
 
     def add_timestep_dim(self, x, lanes):
         """
@@ -130,7 +130,7 @@ class LanePreprocess:
             )
 
         lanes = distance_filter_and_pad(
-            lanes, self.num_padded
+            lanes, self.num_points
         )
 
         return lanes, final_lanes

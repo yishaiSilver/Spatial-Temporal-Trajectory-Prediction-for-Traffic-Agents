@@ -28,7 +28,7 @@ from models.c_seq2seq import Seq2Seq
 from utils.logger_config import logger
 
 
-COUNT_MOVING_AVERAGE = 1000
+COUNT_MOVING_AVERAGE = 100
 
 
 def move_inputs_to_device(inputs, device):
@@ -114,18 +114,24 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
         #     exit()
         # i += 1
 
-        predictions = model(input_tensors)
+        predictions, ortho_loss = model(input_tensors)
 
         predictions = prediction_correction(predictions, metadata)
 
-        loss = loss_fn(predictions, labels)
+        normal_loss = loss_fn(predictions, labels)
+
+        # want to optimize for both the normal loss and the orthogonality loss
+        loss = normal_loss + ortho_loss
 
         loss.backward()
 
         optimizer.step()
 
-        moving_avg_losses.append(loss.item())
-        moving_avg_sum += loss.item()
+        # now just business as usual
+        loss = normal_loss.item()
+
+        moving_avg_losses.append(loss)
+        moving_avg_sum += loss
         if len(moving_avg_losses) > COUNT_MOVING_AVERAGE:
             first_loss = moving_avg_losses.pop(0)
             moving_avg_sum -= first_loss
@@ -186,7 +192,7 @@ def validate_epoch(model, loss_fn, data_loader):
 
             # exit()
 
-            outputs = model(input_tensors)
+            outputs, _ = model(input_tensors)
 
             # postprocess the outputs
             outputs = prediction_correction(outputs, metadata)

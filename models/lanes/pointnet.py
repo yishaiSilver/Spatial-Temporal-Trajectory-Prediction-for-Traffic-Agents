@@ -10,6 +10,8 @@ from torch.autograd import Variable
 
 import numpy as np
 
+from utils.logger_config import logger
+
 
 class TNet(nn.Module):
     """
@@ -34,6 +36,20 @@ class TNet(nn.Module):
         self.bn5 = nn.BatchNorm1d(256)
 
         self.k = k
+
+    def get_orthogonality_loss(self, matrix):
+        """
+        Takes in a matrix and calculates the orthogonality loss.
+        """
+
+        k = matrix.shape[1]
+        identity = torch.eye(k).to(matrix.device)  # Identity matrix
+        product = torch.bmm(matrix, matrix.transpose(2, 1))  # T * T^T
+
+        # Compute the difference from the identity matrix
+        loss = F.mse_loss(product, identity.expand_as(product))
+
+        return loss
 
     def forward(self, x):
         """
@@ -62,7 +78,9 @@ class TNet(nn.Module):
         x = x + identity
         x = x.view(-1, self.k, self.k)
 
-        return x
+        loss = self.get_orthogonality_loss(x)
+
+        return x, loss
 
 
 class PointNet(nn.Module):
@@ -70,11 +88,16 @@ class PointNet(nn.Module):
     The PointNet backbone being used to encode the lanes.
     """
 
-    def __init__(self, input_dims=2):
+    def __init__(self, num_points=20, input_dims=4, output_dims=64):
         """
         initialization of pointnet.
         """
         super().__init__()
+
+        global_feature_dims = 128
+        combination_size = (
+            global_feature_dims * num_points + global_feature_dims
+        )
 
         # transformation network
         self.tnet1 = TNet(k=input_dims)
@@ -87,17 +110,20 @@ class PointNet(nn.Module):
         # shared mlp 2
         self.conv3 = nn.Conv1d(32, 32, kernel_size=1)
         self.conv4 = nn.Conv1d(32, 128, kernel_size=1)
-        self.conv5 = nn.Conv1d(
-            128, 128, kernel_size=1
-        )  # 256 global feature size
+        self.conv5 = nn.Conv1d(128, global_feature_dims, kernel_size=1)
 
         self.bn1 = nn.BatchNorm1d(32)
         self.bn2 = nn.BatchNorm1d(32)
         self.bn3 = nn.BatchNorm1d(32)
         self.bn4 = nn.BatchNorm1d(128)
-        self.bn5 = nn.BatchNorm1d(128)
+        self.bn5 = nn.BatchNorm1d(global_feature_dims)
 
-        torch.set_float32_matmul_precision('high')
+        # mlp for combining local and global features
+        self.fc1 = nn.Linear(combination_size, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, output_dims)
+
+        torch.set_float32_matmul_precision("high")
 
     def forward(self, x):
         """
@@ -106,7 +132,7 @@ class PointNet(nn.Module):
         batchsize = x.shape[0]
 
         # apply first transformation
-        tm_1 = self.tnet1(x)
+        tm_1, ortho_loss_1 = self.tnet1(x)
         x = torch.bmm(x.transpose(2, 1), tm_1).transpose(2, 1)
 
         # go through first mlp
@@ -114,7 +140,7 @@ class PointNet(nn.Module):
         x = F.leaky_relu(self.bn2(self.conv2(x)))
 
         # apply second transformation
-        tm_2 = self.tnet2(x)
+        tm_2, ortho_loss_2 = self.tnet2(x)
         x = torch.bmm(x.transpose(2, 1), tm_2).transpose(2, 1)
 
         # go through second mlp
@@ -122,8 +148,24 @@ class PointNet(nn.Module):
         x = F.leaky_relu(self.bn4(self.conv4(x)))
         x = F.leaky_relu(self.bn5(self.conv5(x)))
 
-        # max pool
-        num_points = x.size(2)
-        x = nn.MaxPool1d(kernel_size=num_points)(x).view(batchsize, -1)
+        # pull out the local features
+        local_feats = x.view(batchsize, -1)
 
-        return x, tm_1
+        # max pool to get the global features
+        num_points = x.size(2)
+        global_feats = nn.MaxPool1d(kernel_size=num_points)(x).view(
+            batchsize, -1
+        )
+
+        # combine the local and global features
+        x = torch.cat((local_feats, global_feats), dim=1)
+
+        # go through the final mlp to get the embeddings
+        x = F.leaky_relu(self.fc1(x))
+        x = F.leaky_relu(self.fc2(x))
+        x = F.leaky_relu(self.fc3(x))
+
+        # orthogonality losses
+        ortho_loss = ortho_loss_1 + ortho_loss_2
+
+        return x, ortho_loss

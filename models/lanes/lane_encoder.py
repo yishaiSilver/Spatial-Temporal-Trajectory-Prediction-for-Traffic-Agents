@@ -12,7 +12,7 @@ class LaneEncoder(nn.Module):
     A module that manages how the lanes get encoded.
     """
 
-    def __init__(self):
+    def __init__(self, num_points):
         """
         Initializes the LaneEncoder module.
         """
@@ -20,8 +20,9 @@ class LaneEncoder(nn.Module):
 
         self.angle_filter = True
         self.distance_filter = True
-        self.distance_threshold = 10
-        self.num_padded = 20
+        self.output_size = 64
+
+        self.ortho_lambda = 0.001
 
         # . TODO will eventually want to use some sort of network
         # to evaluate which lanes are important, but for now the general
@@ -29,7 +30,7 @@ class LaneEncoder(nn.Module):
 
         # . TODO possibly use zero padding to begin with for optimization
 
-        self.pointnet = PointNet(4)  # 4 input dims
+        self.pointnet = PointNet(num_points, 4, self.output_size)  # 4 input dims
 
     def forward(self, x, lanes):
         """
@@ -57,9 +58,9 @@ class LaneEncoder(nn.Module):
             lanes = lanes.cuda()
 
         # get the embeddings
-        embeddings, matrix = self.pointnet(lanes)
+        embeddings, ortho_loss = self.pointnet(lanes)
 
         # convert back to batchsize x timesteps x embedddings
         embeddings = embeddings.view(b, t, -1)
 
-        return embeddings, matrix
+        return embeddings, ortho_loss * self.ortho_lambda

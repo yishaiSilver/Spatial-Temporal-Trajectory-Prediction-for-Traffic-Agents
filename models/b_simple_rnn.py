@@ -131,7 +131,7 @@ class SimpleRNN(nn.Module):
         # to input timesteps as part of the transformation pipeline
         # therefore, we just unpack the lanes here
         lanes, lanes_t = lanes
-        lane_embeddings, _ = self.lane_encoder(x, lanes)
+        lane_embeddings, ortho_loss = self.lane_encoder(x, lanes)
 
         # get the positional embeddings
         x = self.get_positional_embeddings(x)
@@ -166,11 +166,14 @@ class SimpleRNN(nn.Module):
 
             # now we need to update the lane information
             lanes, lanes_t = self.lane_preprocess(x_t, lanes_t)
-            lane_embeddings, _ = self.lane_encoder(x_t, lanes)
+            lane_embeddings, o_loss = self.lane_encoder(x_t, lanes)
 
             x = torch.cat((x_t, lane_embeddings), dim=2)
+            ortho_loss += o_loss
+
+            x = x.detach()
 
         # stack the outputs
         outputs = torch.stack(outputs, dim=1)
 
-        return outputs
+        return outputs, ortho_loss

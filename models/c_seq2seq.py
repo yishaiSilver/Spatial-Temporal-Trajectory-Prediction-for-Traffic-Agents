@@ -63,7 +63,12 @@ class Seq2Seq(nn.Module):
             self.positional_embeddings * 2 if self.positional_embeddings else 1
         )
 
-        input_size += 128
+        num_points = 20
+        self.lane_preprocess = LanePreprocess(num_points=num_points)
+        self.lane_encoder = LaneEncoder(num_points=num_points)
+        self.lane_encoder.cuda()
+
+        input_size += self.lane_encoder.output_size
 
         # add the positional embeddings *if* they are being used
         # input_size *= positional_embeddings * 2 if positional_embeddings else 1
@@ -97,9 +102,6 @@ class Seq2Seq(nn.Module):
         self.fc4 = nn.Linear(hidden_size * 2, hidden_size*2, device=self.device)
         self.fc5 = nn.Linear(hidden_size*2, coord_dims, device=self.device)
 
-        self.lane_preprocess = LanePreprocess()
-        self.lane_encoder = LaneEncoder()
-        self.lane_encoder.cuda()
 
         logger.debug(
             "\n Created Seq2Seq: \n\t Input size: %d \n\t Device: %s \n\t Parameters: %d",
@@ -166,7 +168,7 @@ class Seq2Seq(nn.Module):
         # to input timesteps as part of the transformation pipeline
         # therefore, we just unpack the lanes here
         lanes, lanes_t = lanes
-        lane_embeddings, _ = self.lane_encoder(x, lanes)
+        lane_embeddings, ortho_loss = self.lane_encoder(x, lanes)
 
         # get the positional embeddings
         x = self.get_positional_embeddings(x)
@@ -179,13 +181,13 @@ class Seq2Seq(nn.Module):
         _, hidden = self.encoder_rnn(x, hidden)
 
         # get the last position
-        x_inp = x[:, -1, :].unsqueeze(1)
+        x = x[:, -1, :].unsqueeze(1)
 
         # decode the output
         outputs = []
         for _ in range(self.output_timesteps):
             # get the output
-            x_t, hidden = self.decoder_rnn(x_inp, hidden)
+            x_t, hidden = self.decoder_rnn(x, hidden)
 
             # get the last output
             # x_t = x_t[:, -1, :]
@@ -207,11 +209,17 @@ class Seq2Seq(nn.Module):
 
             # now we need to update the lane information
             lanes, lanes_t = self.lane_preprocess(x_t, lanes_t)
-            lane_embeddings, _ = self.lane_encoder(x_t, lanes)
+            lane_embeddings, o_loss = self.lane_encoder(x_t, lanes)
 
+            # combine x and lane embeddings. Also add ortho loss
             x = torch.cat((x_t, lane_embeddings), dim=2)
+            ortho_loss += o_loss
+
+            # detach in order to feed into the next iteration
+            # significant speedup due to less backprop. reccomended by pytorch
+            x = x.detach()
 
         # stack the outputs
         outputs = torch.stack(outputs, dim=1)
 
-        return outputs
+        return outputs, ortho_loss

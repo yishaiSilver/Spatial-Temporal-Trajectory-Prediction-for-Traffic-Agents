@@ -78,7 +78,7 @@ def apply(datum):
     positions = np.concatenate([positions_in, positions_out], axis=1)
     velocities = np.concatenate([velocities_in, velocities_out], axis=1)
 
-    # ccenter the positions around the target agent
+    # center the positions around the target agent
     target_positions = positions[agent_index]
     positions = positions - target_positions
     lane_positions = lane_positions - target_positions[0] # only using 0th ts

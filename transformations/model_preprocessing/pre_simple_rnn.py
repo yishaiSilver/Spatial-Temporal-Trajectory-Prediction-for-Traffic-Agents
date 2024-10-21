@@ -56,11 +56,12 @@ class preSimpleRNN:
             x = inputs[0][np.newaxis, :, :]
 
             # # preprocess the lanes
-            lanes, last_lane = LanePreprocess()(x, lanes)
+            lanes, last_lane = LanePreprocess(20)(x, lanes)
 
             # logger.debug(f"lanes: {lanes.shape}")
 
             inputs[1] = (lanes[0], last_lane[0])
+
 
         return inputs, labels, correction, metadata
 
