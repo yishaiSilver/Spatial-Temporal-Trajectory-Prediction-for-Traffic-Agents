@@ -70,6 +70,9 @@ class Seq2Seq(nn.Module):
 
         input_size += self.lane_encoder.output_size
 
+        # TODO: config
+        self.teacher_forcing_freq = 1
+
         # add the positional embeddings *if* they are being used
         # input_size *= positional_embeddings * 2 if positional_embeddings else 1
 
@@ -158,11 +161,11 @@ class Seq2Seq(nn.Module):
 
         return embeddings  # TODO return matrix, use normalization to encourage orthogonality
 
-    def forward(self, input):
+    def forward(self, x):
         """
         Forward pass through the network.
         """
-        x, lanes, other = input
+        x, lanes, neighbors, teacher_forcing = x
 
         # to make better use of parallelism, we preprocess lanes belonging
         # to input timesteps as part of the transformation pipeline
@@ -185,7 +188,16 @@ class Seq2Seq(nn.Module):
 
         # decode the output
         outputs = []
-        for _ in range(self.output_timesteps):
+        for t in range(self.output_timesteps):
+            # should we use teacher forcing?
+            if t and t % self.teacher_forcing_freq == 0:
+                tf = teacher_forcing[:, t, :].unsqueeze(1)
+
+                #. TODO add positional embeddings
+                # tf = self.get_positional_embeddings(tf)
+
+                x[:, :, :2] = tf
+
             # get the output
             x_t, hidden = self.decoder_rnn(x, hidden)
 

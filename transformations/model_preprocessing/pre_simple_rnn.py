@@ -36,8 +36,12 @@ class preSimpleRNN:
         # lanes?
 
         # inputs, labels, correction_function, and metadata
-        inputs = [datum["p_in"][target_index], None, None]
-        labels = datum["p_out"][target_index]
+        p_in = datum["p_in"][target_index]
+        p_out = datum["p_out"][target_index]
+
+        # input positions, lane information, neighbors, teacher forcing
+        inputs = [p_in, None, None, p_out]
+        labels = p_out
         correction = datum["inverse"]
         metadata = datum["metadata"]
 

@@ -125,7 +125,7 @@ class SimpleRNN(nn.Module):
         """
         Forward pass through the network.
         """
-        x, lanes, _ = x
+        x, lanes, neighbors, teacher_forcing = x
 
         # to make better use of parallelism, we preprocess lanes belonging
         # to input timesteps as part of the transformation pipeline

@@ -71,7 +71,8 @@ def collate(batch_data):
 
     batch_inputs_pin = []
     batch_inputs_lanes = []
-    batch_inputs_other = []
+    batch_inputs_neighbors = []
+    batch_inputs_teacher_forcing = []
 
     batch_labels = []
     batch_prediction_correction = []
@@ -80,12 +81,13 @@ def collate(batch_data):
     for datum in batch_data:
         model_inputs, label, prediction_correction, metadata = datum
 
-        pin, lanes, other = model_inputs
+        pin, lanes, neighbors, teacher_forcing = model_inputs
         batch_inputs_pin.append(pin)
+        batch_inputs_teacher_forcing.append(teacher_forcing)
         if lanes is not None:
             batch_inputs_lanes.append(lanes)
-        if other is not None:
-            batch_inputs_other.append(other)
+        if neighbors is not None:
+            batch_inputs_neighbors.append(neighbors)
 
         batch_labels.append(label)
         batch_prediction_correction.append(prediction_correction)
@@ -93,6 +95,10 @@ def collate(batch_data):
 
     pins = np.array(batch_inputs_pin)
     pins = torch.tensor(pins, dtype=torch.float32)
+
+    teacher_forcing = np.array(batch_inputs_teacher_forcing)
+    teacher_forcing = torch.tensor(teacher_forcing, dtype=torch.float32)
+
     if len(batch_inputs_lanes) != 0:
         # lanes = [np.array(lane) for lane in batch_inputs_lanes]
         # lanes = [torch.tensor(lane, dtype=torch.float32) for lane in lanes]
@@ -105,11 +111,11 @@ def collate(batch_data):
         lanes = torch.stack(lanes)
         lanes = (lanes, final_lanes)
 
-    if len(batch_inputs_other) != 0:
-        other = np.array(batch_inputs_other)
-        other = torch.tensor(other, dtype=torch.float32)
+    if len(batch_inputs_neighbors) != 0:
+        neighbors = np.array(batch_inputs_neighbors)
+        neighbors = torch.tensor(neighbors, dtype=torch.float32)
 
-    inputs = (pins, lanes, other)
+    inputs = (pins, lanes, neighbors, teacher_forcing)
 
     # convert all labels to tensors
     labels = np.array(batch_labels)
