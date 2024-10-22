@@ -72,7 +72,7 @@ class Seq2Seq(nn.Module):
         input_size += self.lane_encoder.output_size
 
         # TODO: config
-        self.teacher_forcing_freq = 2
+        self.teacher_forcing_freq = 10
 
         # add the positional embeddings *if* they are being used
         # input_size *= positional_embeddings * 2 if positional_embeddings else 1

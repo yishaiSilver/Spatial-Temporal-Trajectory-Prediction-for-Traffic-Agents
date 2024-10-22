@@ -70,6 +70,10 @@ def update_plot(timestep, scenes, axs, preds=None):
         lane_positions = lane_positions[lane_indices]
         lane_norms = lane_norms[lane_indices]
 
+        positive_lanes = np.where(lane_positions[:, 1] > 0)[0]
+        lane_positions = lane_positions[positive_lanes]
+        lane_norms = lane_norms[positive_lanes]
+
         # order by distance to 0, 0
         lane_distances = np.linalg.norm(lane_positions, axis=1)
         lane_indices = np.argsort(lane_distances)[:20]
@@ -235,16 +239,16 @@ def get_prediction(model_cfg, data_cfg, idx):
     return prediction
 
 
-# index = 200 # left turn
-# index = 100 # lane change
-# index = 20  # straight
-index = 40000  # great left turn
-# index = 5 # impressive overtake
-# index = 1000 # slow down to avoid crash
-# index = 500 # odd scene with lots of entities
+# INDEX = 200 # left turn
+# INDEX = 100 # lane change
+# INDEX = 20  # straight
+# INDEX = 40000  # great left turn
+# INDEX = 5 # impressive overtake
+# INDEX = 1000 # slow down to avoid crash
+# INDEX = 500 # odd scene with lots of entities
 
 indices = [
-    100, 
+    100,
     40000,
     5
 ]

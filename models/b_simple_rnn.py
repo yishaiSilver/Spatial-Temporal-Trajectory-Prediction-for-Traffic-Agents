@@ -63,10 +63,12 @@ class SimpleRNN(nn.Module):
             else 1
         )
 
-        input_size += 128
+        input_size += 64
 
         self.input_size = input_size
         self.hidden_size = hidden_size
+
+        self.teacher_forcing_freq = 10
 
         # create the recurrent network
         # TODO change to config spec: RNN, GRU, LSTM
@@ -144,7 +146,20 @@ class SimpleRNN(nn.Module):
 
         outputs = []
 
-        for _ in range(self.output_timesteps):
+        for t in range(self.output_timesteps):
+            # should we use teacher forcing?
+            if (
+                t > 0
+                and self.teacher_forcing_freq > 0
+                and t % self.teacher_forcing_freq == 0
+            ):
+                tf = teacher_forcing[:, t, :].unsqueeze(1)
+
+                # . TODO add positional embeddings
+                # tf = self.get_positional_embeddings(tf)
+
+                x[:, :, :2] = tf
+
             # get the output
             x_t, hidden = self.rnn(x, hidden)
 

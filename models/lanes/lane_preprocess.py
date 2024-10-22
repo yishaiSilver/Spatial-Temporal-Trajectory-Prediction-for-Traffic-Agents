@@ -7,7 +7,10 @@ import torch
 import numpy as np
 
 from models.lanes.angle_filter import angle_filter
+from models.lanes.rear_filter import rear_filter
 from models.lanes.distance_filter import distance_filter_and_pad
+
+from utils.logger_config import logger
 
 class LanePreprocess:
     """
@@ -105,11 +108,16 @@ class LanePreprocess:
         padding them.
         """
 
+        # filter out lanes in the rear
+        lanes = rear_filter(lanes)
+
         # since angle doesn't change, do it first to minimize other points
         # considered. Only do it at the beginning, when lanes
         # don't have a timestep dimension
         if len(lanes[0].shape) == 2:
             lanes = angle_filter(lanes)
+
+            lanes = rear_filter(lanes)
 
             # add a timestep dimension to the lanes:
             # list of batches x timesteps x lanes x dims

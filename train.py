@@ -22,13 +22,13 @@ from torch.profiler import profile, record_function, ProfilerActivity
 import data_loader.data_loaders as data
 
 # from models.a_simple_mlp import SimpleMLP
-# from models.b_simple_rnn import SimpleRNN
+from models.b_simple_rnn import SimpleRNN
 from models.c_seq2seq import Seq2Seq
 
 from utils.logger_config import logger
 
 
-COUNT_MOVING_AVERAGE = 100
+COUNT_MOVING_AVERAGE = 600
 
 
 def move_inputs_to_device(inputs, device):
@@ -57,6 +57,33 @@ def move_inputs_to_device(inputs, device):
 
         input_tensors.append(input_tensor)
     return input_tensors
+
+
+def fde_loss(predictions, labels):
+    """
+    Calculates the FDE loss between the predictions and the labels.
+    """
+
+    prediction_final_ts = predictions[:, -1, :]
+    labels_final_ts = labels[:, -1, :]
+
+    fde = torch.norm(prediction_final_ts - labels_final_ts, p=2, dim=-1)
+
+    return fde.mean()
+
+
+def ade_Loss(predictions, labels):
+    """
+    Calculates the ADE loss between the predictions and the labels.
+
+    1/T * sum_t(||p_t - l_t||)
+
+    """
+    displacement_error = torch.norm(predictions - labels, p=2, dim=-1)
+    ade = displacement_error.mean()
+
+    return ade
+
 
 def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
     """
@@ -95,7 +122,6 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
     for batch_data in iterator:
         inputs, labels, prediction_correction, metadata = batch_data
 
-        
         input_tensors = move_inputs_to_device(inputs, device)
         labels = labels.to(device)
 
@@ -118,17 +144,19 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
 
         predictions = prediction_correction(predictions, metadata)
 
-        normal_loss = loss_fn(predictions, labels)
+        # normal_loss = loss_fn(predictions, labels)
+        ade = ade_Loss(predictions, labels)
+        fde = fde_loss(predictions, labels)
 
         # want to optimize for both the normal loss and the orthogonality loss
-        loss = normal_loss + ortho_loss
+        loss = ade + fde + ortho_loss
 
         loss.backward()
 
         optimizer.step()
 
         # now just business as usual
-        loss = normal_loss.item()
+        loss = loss_fn(predictions, labels).item()
 
         moving_avg_losses.append(loss)
         moving_avg_sum += loss
@@ -181,7 +209,6 @@ def validate_epoch(model, loss_fn, data_loader):
 
             input_tensors = move_inputs_to_device(inputs, device)
             labels = labels.to(device)
-
 
             # with profile(activities=[
             #         ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:

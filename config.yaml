@@ -33,7 +33,7 @@ num_epochs: 10
 #   dropout: 0.2
 
 model: 
-  name: Seq2Seq
+  name: SimpleRNN
   device: cuda
   hidden_size: 512
   num_layers: 4
@@ -72,3 +72,4 @@ data:
 
   transforms:
     - AgentCenter
+    - RandomNoise

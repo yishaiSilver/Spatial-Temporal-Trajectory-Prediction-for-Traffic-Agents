@@ -51,11 +51,11 @@ class LaneEncoder(nn.Module):
         b, t, p, d = lanes.shape
         lanes = lanes.view(b * t, d, p)  # reordering d and p
 
-        # track gradients only for the pointnet call
-        lanes = lanes.detach()
-
         if x.is_cuda:
             lanes = lanes.cuda()
+
+        # track gradients only for the pointnet call
+        lanes = lanes.detach()
 
         # get the embeddings
         embeddings, ortho_loss = self.pointnet(lanes)

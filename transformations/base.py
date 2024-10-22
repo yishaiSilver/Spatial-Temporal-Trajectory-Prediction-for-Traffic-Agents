@@ -4,6 +4,7 @@
 
 
 import transformations.agent_centered_transformations as AgentCenter
+import transformations.random_noise as RandomNoise
 from transformations.model_preprocessing.pre_simple_mlp import preSimpleMLP
 from transformations.model_preprocessing.pre_simple_rnn import preSimpleRNN
 from transformations.model_preprocessing.pre_seq2seq import preSeq2Seq
@@ -70,6 +71,8 @@ class BaseTransformation:
             # perform whatever additional transformations are needed
             if "AgentCenter" in transforms:
                 x = AgentCenter.apply(x)
+            if "RandomNoise" in transforms:
+                x = RandomNoise.apply(x)
             
 
         # forward pass through whatever model-specific transformations are needed
