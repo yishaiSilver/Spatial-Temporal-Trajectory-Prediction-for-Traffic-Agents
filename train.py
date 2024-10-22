@@ -295,6 +295,10 @@ def main(main_config):
             best_val_loss = validation_loss
             model_path = f"models/saved_weights/{model_config['name']}.pth"
             torch.save(model.state_dict(), model_path)
+
+            # also save a text file with the validation loss
+            with open(f"{model_path}.txt", "w") as file:
+                file.write(f"Best loss: {validation_loss}")
         else:
             logger.info(
                 "\033[91mNot saving. Val. loss: %f\033[0m", validation_loss

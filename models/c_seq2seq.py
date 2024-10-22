@@ -16,6 +16,7 @@ from models.lanes.lane_preprocess import LanePreprocess
 
 from utils.logger_config import logger
 
+
 class Seq2Seq(nn.Module):
     """
     A wrapper for the MLP that .
@@ -71,7 +72,7 @@ class Seq2Seq(nn.Module):
         input_size += self.lane_encoder.output_size
 
         # TODO: config
-        self.teacher_forcing_freq = 1
+        self.teacher_forcing_freq = 2
 
         # add the positional embeddings *if* they are being used
         # input_size *= positional_embeddings * 2 if positional_embeddings else 1
@@ -100,11 +101,16 @@ class Seq2Seq(nn.Module):
         )
 
         self.fc1 = nn.Linear(hidden_size, hidden_size * 2, device=self.device)
-        self.fc2 = nn.Linear(hidden_size * 2, hidden_size*3, device=self.device)
-        self.fc3 = nn.Linear(hidden_size * 3, hidden_size*2, device=self.device)
-        self.fc4 = nn.Linear(hidden_size * 2, hidden_size*2, device=self.device)
-        self.fc5 = nn.Linear(hidden_size*2, coord_dims, device=self.device)
-
+        self.fc2 = nn.Linear(
+            hidden_size * 2, hidden_size * 3, device=self.device
+        )
+        self.fc3 = nn.Linear(
+            hidden_size * 3, hidden_size * 2, device=self.device
+        )
+        self.fc4 = nn.Linear(
+            hidden_size * 2, hidden_size * 2, device=self.device
+        )
+        self.fc5 = nn.Linear(hidden_size * 2, coord_dims, device=self.device)
 
         logger.debug(
             "\n Created Seq2Seq: \n\t Input size: %d \n\t Device: %s \n\t Parameters: %d",
@@ -134,32 +140,9 @@ class Seq2Seq(nn.Module):
             x_positional = torch.cat((x_positional, c), dim=2)
 
         # change to device
-        x_positional = x_positional.to(self.device)
+        x_positional = x_positional.to(self.device).detach()
 
         return x_positional
-
-    @torch.compile()
-    def embed_lanes(self, lanes):
-        """
-        takes in 2d lanes and generates an embedding vector
-        """
-
-        # convert from batchsize x timesteps x points x dims
-        # to:          (batchsize * timesteps) x points x dims
-
-        b, t, p, d = lanes.shape
-
-        lanes = lanes.view(b * t, d, p)  # reordering d and p
-
-        embeddings, matrix = self.pointnet(lanes)
-
-        # convert back to batchsize x timesteps x embedddings
-        embeddings = embeddings.view(b, t, -1)
-
-        if lanes.is_cuda:
-            embeddings = embeddings.cuda()
-
-        return embeddings  # TODO return matrix, use normalization to encourage orthogonality
 
     def forward(self, x):
         """
@@ -190,10 +173,14 @@ class Seq2Seq(nn.Module):
         outputs = []
         for t in range(self.output_timesteps):
             # should we use teacher forcing?
-            if t and t % self.teacher_forcing_freq == 0:
+            if (
+                t > 0
+                and self.teacher_forcing_freq > 0
+                and t % self.teacher_forcing_freq == 0
+            ):
                 tf = teacher_forcing[:, t, :].unsqueeze(1)
 
-                #. TODO add positional embeddings
+                # . TODO add positional embeddings
                 # tf = self.get_positional_embeddings(tf)
 
                 x[:, :, :2] = tf

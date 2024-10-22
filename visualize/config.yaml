@@ -5,7 +5,7 @@ model:
   # dropout: 0.2
 
   
-  name: SimpleRNN
+  name: Seq2Seq
   device: cpu
   hidden_size: 512
   num_layers: 4
@@ -32,11 +32,20 @@ data:
   input_timesteps: 19
   output_timesteps: 30
   features:
-    lane: 0
+    lane:
+      angle_filter: True # change to angle
+      distance_filter: 10
+      num_lanes: 20
+      embedding_size: 4
+      positional_embeddings: 0 # not used if embedding_size > 0
+    
+    # needs work
+    # lane: 0 # needs work
     p_in: 0
     v_in: 0 # should be same as p_in (num agents being considered)
 
-    positional_embeddings: 0
+    # fix me: positional embeddings causing NaN loss if too large
+    positional_embeddings: 0 # 3 got down to 2.6
 
   transforms:
     - AgentCenter

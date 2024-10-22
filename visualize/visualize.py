@@ -17,8 +17,11 @@ import torch
 
 import data_loader.data_loaders as data
 from models.b_simple_rnn import SimpleRNN
+from models.c_seq2seq import Seq2Seq
 import transformations.agent_centered_transformations as AgentCenter
 from transformations.model_preprocessing.pre_simple_rnn import preSimpleRNN
+
+from utils.logger_config import logger
 
 # open the config file
 with open("config.yaml", "r", encoding="utf-8") as file:
@@ -41,20 +44,14 @@ def update_plot(timestep, scenes, axs, preds=None):
         num_agents = len(scene["track_id"])
 
         if timestamp < len(scene["p_in"][0]):
-            predicting = "Input Data"
             positions = np.array(scene["p_in"])
-
             prior_offset = np.zeros(2)
         else:
-            predicting = "Output Data"
             positions = np.array(scene["p_out_transformed"])
             timestamp -= len(scene["p_in"][0])
-
-            # get the total sum of p_in[agent_index] to get the offset
             prior_offset = np.sum(scene["p_in"][agent_index], axis=0)
 
         agent_positions = positions[agent_index]
-
         positions = positions[:num_agents, timestamp, :]
 
         offset = np.cumsum(agent_positions, axis=0)
@@ -62,6 +59,22 @@ def update_plot(timestep, scenes, axs, preds=None):
 
         lane_positions = scene["lane"] - total_offset
         lane_norms = scene["lane_norm"]
+
+        # get the lane norm angles
+        lane_angles = np.arctan2(lane_norms[:, 1], lane_norms[:, 0])
+
+        # get the indices of the lane angles greater than 0
+        lane_indices = np.where(lane_angles > 0)[0]
+
+        # filter out the lanes that are not in the correct direction
+        lane_positions = lane_positions[lane_indices]
+        lane_norms = lane_norms[lane_indices]
+
+        # order by distance to 0, 0
+        lane_distances = np.linalg.norm(lane_positions, axis=1)
+        lane_indices = np.argsort(lane_distances)[:20]
+        lane_positions = lane_positions[lane_indices]
+        lane_norms = lane_norms[lane_indices]
 
         # Plot the lanes
         for lane_position, lane_norm in zip(lane_positions, lane_norms):
@@ -123,7 +136,7 @@ def animate(scenes, preds=None, filename="animation.gif"):
     ani = animation.FuncAnimation(
         fig,
         update_plot,
-        frames=range(num_timestamps),
+        frames=tqdm.tqdm(range(num_timestamps)),
         fargs=(scenes, axs, preds),
         interval=20,  # Time in milliseconds between frames
         repeat=True,
@@ -136,7 +149,7 @@ def animate(scenes, preds=None, filename="animation.gif"):
 model_config = config["model"]
 data_config = config["data"]
 model_input_loader, _ = data.create_data_loader(
-    model_config, data_config, train=True, examine=False
+    model_config, data_config, train=True
 )
 
 
@@ -159,6 +172,35 @@ visualization_dataset = data.ArgoverseDataset(
     data_config["train_path"], AgentCenter.apply
 )
 
+def move_inputs_to_device(inputs, device):
+    """
+    Move the inputs to the device.
+
+    Args:
+        inputs (list): List of inputs to be moved to the device.
+        device (torch.device): The device to move the inputs to.
+
+    Returns:
+        list: List of inputs moved to the device.
+    """
+
+    # FIXME there's gotta be a better way to do this
+    # inputs on device
+    input_tensors = []
+    for input_tensor in inputs:
+        if isinstance(input_tensor, tuple):
+            input_tensor = list(input_tensor)
+
+        # if its the lanes, it will appear as list[tensor]
+        if isinstance(input_tensor, list):
+            lanes = input_tensor[0].to(device)
+            final_lanes = [ip.to(device) for ip in input_tensor[1]]
+            input_tensor = (lanes, final_lanes)
+        elif input_tensor is not None:
+            input_tensor = input_tensor.to(device)
+
+        input_tensors.append(input_tensor)
+    return input_tensors
 
 def get_prediction(model_cfg, data_cfg, idx):
     """
@@ -169,20 +211,19 @@ def get_prediction(model_cfg, data_cfg, idx):
     # collate into batch, TODO fix prediction_correction
     inputs, _, _, _ = data.collate([model_input])
 
-    model = SimpleRNN(model_cfg, data_cfg)
+    model = Seq2Seq(model_cfg, data_cfg)
     path = f"../models/saved_weights/{model_cfg['name']}.pth"
     model.load_state_dict(torch.load(path, weights_only=True))
     model.to("cpu")
 
-    inputs = tuple(
-        input_tensor.to("cpu") if input_tensor is not None else None
-        for input_tensor in inputs
-    )
+    model.teacher_forcing_freq = 0
+
+    inputs = move_inputs_to_device(inputs, "cpu")
 
     # predict
     model.eval()
     with torch.no_grad():
-        prediction = model(inputs)
+        prediction, ortho_loss = model(inputs)
 
     # already in the correct grame, so just cumsum is needed to get the
     # positions relative to the last p_in position, which is known

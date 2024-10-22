@@ -82,8 +82,8 @@ class SimpleRNN(nn.Module):
         self.fc2 = nn.Linear(hidden_size * 2, hidden_size, device=self.device)
         self.fc3 = nn.Linear(hidden_size, coord_dims, device=self.device)
 
-        self.lane_preprocess = LanePreprocess()
-        self.lane_encoder = LaneEncoder()
+        self.lane_preprocess = LanePreprocess(20)
+        self.lane_encoder = LaneEncoder(20)
         self.lane_encoder.cuda()
 
         logger.debug(

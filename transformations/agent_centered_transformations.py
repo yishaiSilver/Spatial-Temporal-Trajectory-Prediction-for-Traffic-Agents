@@ -89,6 +89,7 @@ def apply(datum):
     lane_positions = lane_positions @ rotation_transforms
     lane_norms = lane_norms @ rotation_transforms
 
+    # set the agent indices to be a displacement from ts to ts
     offsets = np.diff(target_positions, axis=0)
     first_offset = np.array([0, 0])
     offsets = np.vstack([first_offset, offsets])
