@@ -60,7 +60,8 @@ class preSimpleRNN:
             x = inputs[0][np.newaxis, :, :]
 
             # # preprocess the lanes
-            lanes, last_lane = LanePreprocess(20)(x, lanes)
+            #. FIXME add to config spec
+            lanes, last_lane = LanePreprocess(10)(x, lanes)
 
             # logger.debug(f"lanes: {lanes.shape}")
 

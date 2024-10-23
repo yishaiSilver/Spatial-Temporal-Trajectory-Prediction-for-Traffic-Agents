@@ -20,7 +20,7 @@ class LaneEncoder(nn.Module):
 
         self.angle_filter = True
         self.distance_filter = True
-        self.output_size = 64
+        self.output_size = 128
 
         self.ortho_lambda = 0.001
 

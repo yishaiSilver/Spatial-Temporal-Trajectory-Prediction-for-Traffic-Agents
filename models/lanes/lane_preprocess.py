@@ -10,7 +10,7 @@ from models.lanes.angle_filter import angle_filter
 from models.lanes.rear_filter import rear_filter
 from models.lanes.distance_filter import distance_filter_and_pad
 
-from utils.logger_config import logger
+# from utils.logger_config import logger
 
 class LanePreprocess:
     """
@@ -23,7 +23,7 @@ class LanePreprocess:
         """
         self.angle_filter = True
         self.distance_filter = True
-        self.num_points = 20
+        self.num_points = num_points
 
     def add_timestep_dim(self, x, lanes):
         """

@@ -63,7 +63,10 @@ class SimpleRNN(nn.Module):
             else 1
         )
 
-        input_size += 64
+        self.lane_preprocess = LanePreprocess(20)
+        self.lane_encoder = LaneEncoder(20)
+        self.lane_encoder.cuda()
+        input_size += self.lane_encoder.output_size
 
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -71,7 +74,7 @@ class SimpleRNN(nn.Module):
         self.teacher_forcing_freq = 10
 
         # create the recurrent network
-        # TODO change to config spec: RNN, GRU, LSTM
+        #. TODO change to config spec: RNN, GRU, LSTM
         self.rnn = nn.GRU(
             input_size=input_size,
             hidden_size=hidden_size,
@@ -84,9 +87,6 @@ class SimpleRNN(nn.Module):
         self.fc2 = nn.Linear(hidden_size * 2, hidden_size, device=self.device)
         self.fc3 = nn.Linear(hidden_size, coord_dims, device=self.device)
 
-        self.lane_preprocess = LanePreprocess(20)
-        self.lane_encoder = LaneEncoder(20)
-        self.lane_encoder.cuda()
 
         logger.debug(
             "\n Created RNN: \n\t Input size: %d \n\t Device: %s \n\t Parameters: %d",
@@ -128,6 +128,9 @@ class SimpleRNN(nn.Module):
         Forward pass through the network.
         """
         x, lanes, neighbors, teacher_forcing = x
+
+        # get rid of unused warning
+        _ = neighbors
 
         # to make better use of parallelism, we preprocess lanes belonging
         # to input timesteps as part of the transformation pipeline

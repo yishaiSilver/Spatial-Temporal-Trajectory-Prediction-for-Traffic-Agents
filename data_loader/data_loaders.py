@@ -129,17 +129,22 @@ def collate(batch_data):
 
 
 def create_data_loader(model_config, data_config, train=True):
-    """TODO: create_data_loader"""
-    #   data_path: str, transforms=None, batch_size=4, shuffle=False, val_split=0.0, num_workers=1
+    """
+    Function used to create the data loader for the given model and data configuration.
+    """
+
+    computer_name = os.uname()[1]
+    computer_specific = data_config[computer_name]
+
     if train:
-        data_path = data_config["train_path"]
+        data_path = computer_specific["train_path"]
     else:
-        data_path = data_config["val_path"]
+        data_path = computer_specific["val_path"]
 
     # extract params
-    batch_size = data_config["batch_size"]
-    num_workers = data_config["num_workers"]
-    train_val_split = data_config["train_val_split"]
+    batch_size = computer_specific["batch_size"]
+    num_workers = computer_specific["num_workers"]
+    train_val_split = computer_specific["train_val_split"]
 
     # create the transformation function
     transform_function = BaseTransformation(model_config, data_config)
@@ -148,7 +153,7 @@ def create_data_loader(model_config, data_config, train=True):
     dataset = ArgoverseDataset(
         data_path,
         transform=transform_function,
-        experimenting=data_config["experimenting"],
+        experimenting=data_config["experimenting"],  # whether to limit size
     )
 
     # use random_split to get the training and validation sets
@@ -177,5 +182,7 @@ def create_data_loader(model_config, data_config, train=True):
         multiprocessing_context="fork",
         pin_memory=True,
     )
+
+    logger.debug("Created data loaders on %s", computer_name)
 
     return train_loader, val_loader

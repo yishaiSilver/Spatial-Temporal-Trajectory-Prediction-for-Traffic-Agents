@@ -6,7 +6,7 @@ import torch
 import numpy as np
 
 
-def distance_filter_and_pad(lanes, padded=30):
+def distance_filter_and_pad(lanes, padded):
     """
     Takes in list of lanes and filters out irrelevant lanes.
     Irrelevant lanes are lanes that are too far to be relevant to the agent.

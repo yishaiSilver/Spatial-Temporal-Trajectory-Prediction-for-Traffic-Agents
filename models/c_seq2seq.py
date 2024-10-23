@@ -5,11 +5,7 @@ This file contains a wrapper for the MLP model. Starting simple.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 import numpy as np
-
-from models.lanes.pointnet import PointNet
-from models.layers.mlp import MLP
 
 from models.lanes.lane_encoder import LaneEncoder
 from models.lanes.lane_preprocess import LanePreprocess
@@ -41,7 +37,6 @@ class Seq2Seq(nn.Module):
         self.input_timesteps = data_config["input_timesteps"]
         input_size = 0
         self.output_timesteps = data_config["output_timesteps"]
-        output_size = coord_dims
 
         # get the hidden size(s)
         hidden_size = model_config["hidden_size"]
@@ -52,7 +47,6 @@ class Seq2Seq(nn.Module):
         features = data_config["features"]
         p_in = features["p_in"] + 1  # neighbors plus target
         v_in = features["v_in"]  # v is same # of agents as p
-        lane = features["lane"]
         self.positional_embeddings = features["positional_embeddings"]
 
         input_size += p_in * coord_dims
@@ -64,14 +58,14 @@ class Seq2Seq(nn.Module):
             self.positional_embeddings * 2 if self.positional_embeddings else 1
         )
 
-        num_points = 20
+        num_points = 10
         self.lane_preprocess = LanePreprocess(num_points=num_points)
         self.lane_encoder = LaneEncoder(num_points=num_points)
         self.lane_encoder.cuda()
 
         input_size += self.lane_encoder.output_size
 
-        # TODO: config
+        # . TODO: config
         self.teacher_forcing_freq = 10
 
         # add the positional embeddings *if* they are being used
@@ -81,7 +75,7 @@ class Seq2Seq(nn.Module):
         self.hidden_size = hidden_size
 
         # create the recurrent network
-        # TODO change to config spec: RNN, GRU, LSTM
+        # . TODO change to config spec: RNN, GRU, LSTM
         self.encoder_rnn = nn.GRU(
             input_size=input_size,
             hidden_size=hidden_size,
@@ -149,6 +143,9 @@ class Seq2Seq(nn.Module):
         Forward pass through the network.
         """
         x, lanes, neighbors, teacher_forcing = x
+
+        # get rid of unused warning
+        _ = neighbors
 
         # to make better use of parallelism, we preprocess lanes belonging
         # to input timesteps as part of the transformation pipeline

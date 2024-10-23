@@ -18,7 +18,7 @@ class TNet(nn.Module):
     Code gotten from fxia22's pointnet.pytorch repository
     """
 
-    def __init__(self, k=2):
+    def __init__(self, k):
         super().__init__()
 
         self.conv1 = nn.Conv1d(k, 32, 1)
@@ -88,7 +88,7 @@ class PointNet(nn.Module):
     The PointNet backbone being used to encode the lanes.
     """
 
-    def __init__(self, num_points=20, input_dims=4, output_dims=64):
+    def __init__(self, num_points, input_dims=4, output_dims=64):
         """
         initialization of pointnet.
         """

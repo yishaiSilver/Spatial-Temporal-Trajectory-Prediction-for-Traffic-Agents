@@ -17,18 +17,17 @@ from torch import nn
 import numpy as np
 import yaml
 import tqdm
-from torch.profiler import profile, record_function, ProfilerActivity
+# from torch.profiler import profile, record_function, ProfilerActivity
 
 import data_loader.data_loaders as data
 
-# from models.a_simple_mlp import SimpleMLP
-from models.b_simple_rnn import SimpleRNN
-from models.c_seq2seq import Seq2Seq
+from models.base import BaseModel
+from utils.optimizer import get_optimizer
 
 from utils.logger_config import logger
 
 
-COUNT_MOVING_AVERAGE = 600
+COUNT_MOVING_AVERAGE = 250
 
 
 def move_inputs_to_device(inputs, device):
@@ -43,7 +42,7 @@ def move_inputs_to_device(inputs, device):
         list: List of inputs moved to the device.
     """
 
-    # FIXME there's gotta be a better way to do this
+    #. FIXME there's gotta be a better way to do this
     # inputs on device
     input_tensors = []
     for input_tensor in inputs:
@@ -72,7 +71,7 @@ def fde_loss(predictions, labels):
     return fde.mean()
 
 
-def ade_Loss(predictions, labels):
+def ade_loss(predictions, labels):
     """
     Calculates the ADE loss between the predictions and the labels.
 
@@ -118,8 +117,10 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
         bar_format="{l_bar}{bar:50}{r_bar}{bar:-50b}",  # broken laptop screen :/
     )
 
-    i = 0
-    for batch_data in iterator:
+    for i, batch_data in enumerate(iterator):
+        # get rid of unused warning
+        _ = i
+
         inputs, labels, prediction_correction, metadata = batch_data
 
         input_tensors = move_inputs_to_device(inputs, device)
@@ -145,7 +146,7 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
         predictions = prediction_correction(predictions, metadata)
 
         # normal_loss = loss_fn(predictions, labels)
-        ade = ade_Loss(predictions, labels)
+        ade = ade_loss(predictions, labels)
         fde = fde_loss(predictions, labels)
 
         # want to optimize for both the normal loss and the orthogonality loss
@@ -268,40 +269,15 @@ def main(main_config):
     train_loader, val_loader = data.create_data_loader(
         model_config, data_config, train=True
     )
-    # val_loader = data.create_data_loader(model_config, data_config, train=False)
 
-    # Rest of the code...
-    # get the model
-    # model = SimpleMLP(model_config, data_config)  # TODO: magic line (sort of)
-    # model = SimpleRNN(model_config, data_config)
-    model = Seq2Seq(model_config, data_config)
-    # switch to config file spec.
+    model = BaseModel(model_config, data_config)
 
-    # get the optimizer
-    # optimizer_config = main_config['optimizer']
-    # optimizer = torch.optim.SGD(
-    #     model.parameters(), lr=0.00005, momentum=0.9, weight_decay=0.001
-    # )  # todo: magic line
-
-    lr = 0.0001
-    weight_decay = 0.0
-
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=lr, weight_decay=weight_decay
-    )
-
-    logger.debug(
-        "\n Created Optimizer: \n\t Learning rate: %f \n\t Weight decay: %f",
-        lr,
-        weight_decay,
-    )
+    optimizer = get_optimizer(model, main_config["optimizer"])
 
     # get the loss
     # loss_config = main_config['loss']
-    loss_fn = nn.MSELoss()  # tod: magic line
+    loss_fn = nn.MSELoss()
 
-    # get the number of epochs:
-    # num_epochs = main_config['num_epochs']
     num_epochs = main_config["num_epochs"]
 
     best_val_loss = np.inf
@@ -324,8 +300,8 @@ def main(main_config):
             torch.save(model.state_dict(), model_path)
 
             # also save a text file with the validation loss
-            with open(f"{model_path}.txt", "w") as file:
-                file.write(f"Best loss: {validation_loss}")
+            with open(f"{model_path}.txt", "w", encoding="utf-8") as text_file:
+                text_file.write(f"{validation_loss}")
         else:
             logger.info(
                 "\033[91mNot saving. Val. loss: %f\033[0m", validation_loss

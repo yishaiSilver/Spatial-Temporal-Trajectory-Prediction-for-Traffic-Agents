@@ -3,25 +3,25 @@ Module for visualizing the predictions of the model.
 """
 
 import sys
-
-sys.path.append("../")
-
 import yaml
 import tqdm
+import torch
 import numpy as np
 
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
-import torch
 
 
 import data_loader.data_loaders as data
-from models.b_simple_rnn import SimpleRNN
-from models.c_seq2seq import Seq2Seq
+
+from models.base import BaseModel
+
 import transformations.agent_centered_transformations as AgentCenter
 from transformations.model_preprocessing.pre_simple_rnn import preSimpleRNN
 
-from utils.logger_config import logger
+sys.path.append("../")
+
+# from utils.logger_config import logger
 
 # open the config file
 with open("config.yaml", "r", encoding="utf-8") as file:
@@ -70,7 +70,7 @@ def update_plot(timestep, scenes, axs, preds=None):
         lane_positions = lane_positions[lane_indices]
         lane_norms = lane_norms[lane_indices]
 
-        positive_lanes = np.where(lane_positions[:, 1] > 0)[0]
+        positive_lanes = np.where(lane_positions[:, 1] > -5)[0]
         lane_positions = lane_positions[positive_lanes]
         lane_norms = lane_norms[positive_lanes]
 
@@ -122,7 +122,7 @@ def update_plot(timestep, scenes, axs, preds=None):
         scene_timestamp = str(scene_timestamp).rjust(2, "0")
 
         # Set the axis limits
-        lim = 30
+        lim = 20
         ax.set_xlim(-lim, lim)
         ax.set_ylim(-lim, lim)
 
@@ -134,7 +134,20 @@ def animate(scenes, preds=None, filename="animation.gif"):
     """
     Animates a scene with optional predictions.
     """
-    fig, axs = plt.subplots(ncols=len(scenes), figsize=(5 * len(scenes), 10))
+
+    # num cols is 3
+    ncols = 3
+
+    nrows = len(scenes) // ncols
+    nrows += 1 if len(scenes) - nrows * ncols > 0 else 0
+
+    fig, axs = plt.subplots(
+        nrows=nrows, ncols=ncols, figsize=(3 * len(scenes), 10)
+    )
+
+    # flatten the axes
+    axs = axs.flatten()
+
     num_timestamps = len(scenes[0]["p_in"][0]) + len(scenes[0]["p_out"][0])
 
     ani = animation.FuncAnimation(
@@ -176,6 +189,7 @@ visualization_dataset = data.ArgoverseDataset(
     data_config["train_path"], AgentCenter.apply
 )
 
+
 def move_inputs_to_device(inputs, device):
     """
     Move the inputs to the device.
@@ -188,7 +202,7 @@ def move_inputs_to_device(inputs, device):
         list: List of inputs moved to the device.
     """
 
-    # FIXME there's gotta be a better way to do this
+    # . FIXME there's gotta be a better way to do this
     # inputs on device
     input_tensors = []
     for input_tensor in inputs:
@@ -206,6 +220,7 @@ def move_inputs_to_device(inputs, device):
         input_tensors.append(input_tensor)
     return input_tensors
 
+
 def get_prediction(model_cfg, data_cfg, idx):
     """
     Get the prediction for a given index.
@@ -215,7 +230,9 @@ def get_prediction(model_cfg, data_cfg, idx):
     # collate into batch, TODO fix prediction_correction
     inputs, _, _, _ = data.collate([model_input])
 
-    model = Seq2Seq(model_cfg, data_cfg)
+    model = BaseModel(model_cfg, data_cfg)
+
+    # model = SimpleRNN(model_cfg, data_cfg)
     path = f"../models/saved_weights/{model_cfg['name']}.pth"
     model.load_state_dict(torch.load(path, weights_only=True))
     model.to("cpu")
@@ -227,7 +244,7 @@ def get_prediction(model_cfg, data_cfg, idx):
     # predict
     model.eval()
     with torch.no_grad():
-        prediction, ortho_loss = model(inputs)
+        prediction, _ = model(inputs)
 
     # already in the correct grame, so just cumsum is needed to get the
     # positions relative to the last p_in position, which is known
@@ -247,13 +264,16 @@ def get_prediction(model_cfg, data_cfg, idx):
 # INDEX = 1000 # slow down to avoid crash
 # INDEX = 500 # odd scene with lots of entities
 
-indices = [
-    100,
-    40000,
-    5
-]
+indices = [100, 40000, 5, 500, 200, 1000, 20, 300, 500]
+# indices = [201,202,203,204,205,206]
+# indices = [301,302,303,304,305,306]
+# indices = [401,402,403,404,405,406]
+# indices = [501,502,503,504,505,506]
+# indices = [601,602,603,604,605,606]
+# indices = [701,702,703,704,705,706]
+# indices = [801,802,803,804,805,806]
 
-scenes = [visualization_dataset[i] for i in indices]
+viz_scenes = [visualization_dataset[i] for i in indices]
 predictions = [get_prediction(model_config, data_config, i) for i in indices]
 
-animate(scenes, predictions, filename="animation.gif")
+animate(viz_scenes, predictions, filename="animation.gif")

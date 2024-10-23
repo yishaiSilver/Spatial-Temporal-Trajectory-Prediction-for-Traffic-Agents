@@ -5,17 +5,17 @@ model:
   # dropout: 0.2
 
   
+  # name: SimpleRNN
+  # device: cpu
+  # hidden_size: 512
+  # num_layers: 4
+  # dropout: 0.0
+
   name: Seq2Seq
-  device: cpu
+  device: cuda
   hidden_size: 512
   num_layers: 4
-  dropout: 0.0
-
-  # name: Seq2Seq
-  # device: cuda
-  # hidden_size: 512
-  # num_layers: 3
-  # dropout: 0.2
+  dropout: 0.15
 
 # config.yaml
 data:
@@ -34,7 +34,7 @@ data:
   features:
     lane:
       angle_filter: True # change to angle
-      distance_filter: 10
+      rear_filter: -5 # 1 for no rear filter
       num_lanes: 20
       embedding_size: 4
       positional_embeddings: 0 # not used if embedding_size > 0

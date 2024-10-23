@@ -32,24 +32,51 @@ num_epochs: 10
 #   hidden_size: [4096, 2048, 4096, 2048, 4096, 1024]
 #   dropout: 0.2
 
+# model: 
+#   name: SimpleRNN
+#   device: cuda
+#   hidden_size: 512
+#   num_layers: 4
+#   dropout: 0.1
+
 model: 
-  name: SimpleRNN
+  name: Seq2Seq
   device: cuda
   hidden_size: 512
   num_layers: 4
   dropout: 0.1
 
-# config.yaml
+optimizer:
+  name: Adam
+  params:
+    lr: 0.0001
+    weight_decay: 0.0
+
 data:
   experimenting: 0 # set to 0 for full dataset
   
-  train_path: /media/ssilver/UbuntuShared/data/train
-  val_path: /media/ssilver/UbuntuShared/data/val_in
-  batch_size: 32
-  shuffle: true
-  num_workers: 12
-
-  train_val_split: 0.9
+  # computer specific
+  xps15:
+    train_path: /media/ssilver/UbuntuShared/data/train
+    val_path: /media/ssilver/UbuntuShared/data/val_in
+    batch_size: 32
+    shuffle: true
+    num_workers: 12
+    train_val_split: 0.9
+  y520:
+    train_path: ../train/train
+    val_path: ../val_in/val_in
+    batch_size: 32
+    shuffle: true
+    num_workers: 7
+    train_val_split: 0.9
+  acer:
+    train_path: ../train/train
+    val_path: ../val_in/val_in
+    batch_size: 32
+    shuffle: true
+    num_workers: 7
+    train_val_split: 0.9
 
   coord_dims: 2
   input_timesteps: 19
