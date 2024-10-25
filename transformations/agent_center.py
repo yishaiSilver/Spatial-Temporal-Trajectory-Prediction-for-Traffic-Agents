@@ -8,7 +8,6 @@ transformation to the given batch data.
 import numpy as np
 import torch
 
-from utils.logger_config import logger
 
 def get_rotation_matrix(positions):
     """

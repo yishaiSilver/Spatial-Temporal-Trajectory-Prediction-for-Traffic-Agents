@@ -4,7 +4,7 @@ Module for visualizing the predictions of the model.
 
 import sys
 import os
-sys.path.append("../")
+
 import yaml
 import tqdm
 import torch
@@ -13,7 +13,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
 
-
+sys.path.append("../")
 import data_loader.data_loaders as data
 
 from models.base import BaseModel
@@ -21,8 +21,6 @@ from models.base import BaseModel
 import transformations.agent_center as AgentCenter
 from transformations.model_preprocessing.pre_simple_rnn import preSimpleRNN
 
-
-# from utils.logger_config import logger
 
 # open the config file
 with open("config.yaml", "r", encoding="utf-8") as file:
@@ -253,7 +251,6 @@ def get_prediction(model_cfg, data_cfg, idx):
     # positions relative to the last p_in position, which is known
     prediction = prediction.reshape(30, 2)
     prediction = prediction.numpy()
-    print(prediction[:5])
     prediction = np.cumsum(prediction, axis=0)
 
     # correct the prediction
@@ -268,7 +265,8 @@ def get_prediction(model_cfg, data_cfg, idx):
 # INDEX = 1000 # slow down to avoid crash
 # INDEX = 500 # odd scene with lots of entities
 
-indices = [100, 40000, 5, 500, 200, 1000, 20, 300, 500]
+# indices = [100, 40000, 5, 500, 200, 1000, 20, 300, 500]
+indices = [100, 40000, 5, 500, 200, 1000]
 # indices = [201,202,203,204,205,206]
 # indices = [301,302,303,304,305,306]
 # indices = [401,402,403,404,405,406]

@@ -21,8 +21,6 @@ import tqdm
 import data_loader.data_loaders as data
 from models.base import BaseModel
 
-# from utils.logger_config import logger
-
 
 def move_inputs_to_device(inputs, device):
     """
@@ -94,17 +92,11 @@ def main(main_config):
 
                 outputs, _ = model(input_tensors)
 
-                print(outputs[2, :5])
-
-                # outputs = outputs[0].unsqueeze(0)
-                # metadata = [metadata[0]]
-
                 outputs = correction(outputs, metadata)
 
                 # Assuming metadata contains the IDs and outputs is a tensor
                 for meta, output in zip(metadata, outputs):
                     scene_id = meta["scene_id"]
-                    # print(output)
                     output = output.flatten()
                     output = output.tolist()
                     row = [scene_id] + output

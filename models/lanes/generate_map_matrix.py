@@ -2,7 +2,6 @@
 A module to generate a map matrix/image from a list of lanes.
 """
 
-import torch
 import numpy as np
 
 from utils.logger_config import logger

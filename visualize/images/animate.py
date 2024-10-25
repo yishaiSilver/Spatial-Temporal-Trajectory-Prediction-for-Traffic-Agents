@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, PillowWriter
 
 
 def plot_timestamp(scene, timestamp):

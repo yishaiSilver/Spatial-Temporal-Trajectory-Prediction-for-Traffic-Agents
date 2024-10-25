@@ -7,7 +7,6 @@ import transformations.agent_center as AgentCenter
 import transformations.random_noise as RandomNoise
 from transformations.model_preprocessing.pre_simple_mlp import preSimpleMLP
 from transformations.model_preprocessing.pre_simple_rnn import preSimpleRNN
-from transformations.model_preprocessing.pre_seq2seq import preSeq2Seq
 
 
 class BaseTransformation:

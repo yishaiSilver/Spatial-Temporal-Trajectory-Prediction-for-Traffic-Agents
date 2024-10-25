@@ -10,7 +10,6 @@ from torch.autograd import Variable
 
 import numpy as np
 
-from utils.logger_config import logger
 
 
 class TNet(nn.Module):

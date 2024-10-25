@@ -2,9 +2,10 @@
 Module used to construct the base model class.
 """
 
+import os
+
 import torch
 import torch.nn as nn
-import os
 
 from models.a_simple_mlp import SimpleMLP
 from models.b_simple_rnn import SimpleRNN

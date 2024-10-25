@@ -6,10 +6,8 @@ the lanes for encoding.
 import torch
 import numpy as np
 
-from models.lanes.angle_filter import angle_filter
 from models.lanes.rear_filter import rear_filter
 from models.lanes.distance_filter import distance_filter_and_pad
-import multiprocessing as mp
 
 # from utils.logger_config import logger
 

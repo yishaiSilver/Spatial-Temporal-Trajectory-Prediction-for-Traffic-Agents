@@ -1,5 +1,4 @@
 import numpy as np
-from utils.logger_config import logger
 
 
 class preSeq2Seq:
@@ -17,18 +16,18 @@ class preSeq2Seq:
             datum (dict): Dictionary containing the data to be transformed.
         """
 
-        features = data_config["features"]
-        feat_agent_positions = features["p_in"]
-        feat_agent_velocities = features["v_in"]
-        feat_lanes = features["lane"]
-        feat_positional_embeddings = features["positional_embeddings"]
+        # features = data_config["features"]
+        # feat_agent_positions = features["p_in"]
+        # feat_agent_velocities = features["v_in"]
+        # feat_lanes = features["lane"]
+        # feat_positional_embeddings = features["positional_embeddings"]
 
         # get the index of the target agent
         target_index = np.where(datum["track_id"] == datum["agent_id"])[0][0]
 
         # get the agent's position
-        p_in = datum["p_in"]
-        target_p_in = p_in[target_index]  # (t, 2)
+        # p_in = datum["p_in"]
+        # target_p_in = p_in[target_index]  # (t, 2)
 
         # TODO:
         # positional embeddings expansion
@@ -47,6 +46,8 @@ class preSeq2Seq:
         """
         Apply the prediction correction to the data.
         """
+        _ = batch_metadata # unused
+
         num_batches = len(batch_predictions)
 
         # reshape to num_batches x num_timesteps x num_features

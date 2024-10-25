@@ -17,7 +17,6 @@ from torch import nn
 import numpy as np
 import yaml
 import tqdm
-from torch.profiler import profile, record_function, ProfilerActivity
 
 import data_loader.data_loaders as data
 

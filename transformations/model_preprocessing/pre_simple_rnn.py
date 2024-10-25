@@ -1,5 +1,9 @@
+"""
+Module used to prepare data for the SimpleRNN model.
+"""
+
 import numpy as np
-from utils.logger_config import logger
+# from utils.logger_config import logger
 
 from models.lanes.lane_preprocess import LanePreprocess
 
@@ -19,17 +23,16 @@ class preSimpleRNN:
         """
 
         features = data_config["features"]
-        feat_agent_positions = features["p_in"]
-        feat_agent_velocities = features["v_in"]
+        # feat_agent_positions = features["p_in"]
+        # feat_agent_velocities = features["v_in"]
         feat_lanes = features["lane"]
-        feat_positional_embeddings = features["positional_embeddings"]
+        # feat_positional_embeddings = features["positional_embeddings"]
 
         # get the index of the target agent
         target_index = np.where(datum["track_id"] == datum["agent_id"])[0][0]
 
         # get the agent's position
         p_in = datum["p_in"]
-        target_p_in = p_in[target_index]  # (t, 2)
 
         # TODO:
         # positional embeddings expansion
@@ -76,6 +79,8 @@ class preSimpleRNN:
         """
         Apply the prediction correction to the data.
         """
+        _ = batch_metadata # unused warning
+
         num_batches = len(batch_predictions)
 
         # reshape to num_batches x num_timesteps x num_features

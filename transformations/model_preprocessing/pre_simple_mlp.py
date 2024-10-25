@@ -1,5 +1,4 @@
 import numpy as np
-from utils.logger_config import logger
 
 class preSimpleMLP:
     """
