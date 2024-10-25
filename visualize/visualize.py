@@ -3,6 +3,8 @@ Module for visualizing the predictions of the model.
 """
 
 import sys
+import os
+sys.path.append("../")
 import yaml
 import tqdm
 import torch
@@ -16,10 +18,9 @@ import data_loader.data_loaders as data
 
 from models.base import BaseModel
 
-import transformations.agent_centered_transformations as AgentCenter
+import transformations.agent_center as AgentCenter
 from transformations.model_preprocessing.pre_simple_rnn import preSimpleRNN
 
-sys.path.append("../")
 
 # from utils.logger_config import logger
 
@@ -180,13 +181,15 @@ def transform(x):
     return x
 
 
+computer_name = os.uname()[1]
+train_path = data_config[computer_name]["train_path"]
 model_input_dataset = data.ArgoverseDataset(
-    data_config["train_path"], transform
+    train_path, transform
 )
 
 # ground truth dataset for visualization
 visualization_dataset = data.ArgoverseDataset(
-    data_config["train_path"], AgentCenter.apply
+    train_path, AgentCenter.apply
 )
 
 
@@ -250,6 +253,7 @@ def get_prediction(model_cfg, data_cfg, idx):
     # positions relative to the last p_in position, which is known
     prediction = prediction.reshape(30, 2)
     prediction = prediction.numpy()
+    print(prediction[:5])
     prediction = np.cumsum(prediction, axis=0)
 
     # correct the prediction

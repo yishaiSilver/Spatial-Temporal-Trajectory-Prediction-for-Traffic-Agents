@@ -43,7 +43,7 @@ model:
   name: Seq2Seq
   device: cuda
   hidden_size: 512
-  num_layers: 4
+  num_layers: 5
   dropout: 0.1
 
 optimizer:
@@ -59,9 +59,9 @@ data:
   xps15:
     train_path: /media/ssilver/UbuntuShared/data/train
     val_path: /media/ssilver/UbuntuShared/data/val_in
-    batch_size: 32
+    batch_size: 64
     shuffle: true
-    num_workers: 12
+    num_workers: 10
     train_val_split: 0.9
   y520:
     train_path: ../train/train
@@ -99,4 +99,4 @@ data:
 
   transforms:
     - AgentCenter
-    - RandomNoise
+    # - RandomNoise

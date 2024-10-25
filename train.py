@@ -17,7 +17,7 @@ from torch import nn
 import numpy as np
 import yaml
 import tqdm
-# from torch.profiler import profile, record_function, ProfilerActivity
+from torch.profiler import profile, record_function, ProfilerActivity
 
 import data_loader.data_loaders as data
 
@@ -128,7 +128,7 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
 
         optimizer.zero_grad()
 
-        # if i > 10:
+        # if i > 20:
         #     with profile(activities=[
         #                 ProfilerActivity.CPU,
         #                 # ProfilerActivity.CUDA
@@ -206,7 +206,7 @@ def validate_epoch(model, loss_fn, data_loader):
 
     with torch.no_grad():
         for batch_data in iterator:
-            inputs, labels, prediction_correction, metadata = batch_data
+            inputs, labels, correction, metadata = batch_data
 
             input_tensors = move_inputs_to_device(inputs, device)
             labels = labels.to(device)
@@ -223,7 +223,7 @@ def validate_epoch(model, loss_fn, data_loader):
             outputs, _ = model(input_tensors)
 
             # postprocess the outputs
-            outputs = prediction_correction(outputs, metadata)
+            outputs = correction(outputs, metadata)
 
             loss = loss_fn(outputs, labels)
 
@@ -281,7 +281,12 @@ def main(main_config):
     num_epochs = main_config["num_epochs"]
 
     best_val_loss = np.inf
+    # save the model if it's the best
+    model_path = f"models/saved_weights/{model_config['name']}.pth"
     for epoch in range(num_epochs):
+        # load the best model
+        model.load_state_dict(torch.load(model_path, weights_only=True))
+
         logger.info("EPOCH %d", epoch)
 
         train_epoch(
@@ -292,11 +297,9 @@ def main(main_config):
         # MSE -> RMSE
         validation_loss = np.sqrt(validation_loss)
 
-        # save the model if it's the best
         if validation_loss < best_val_loss:
             logger.info("\033[92mSaving. Val. loss: %f\033[0m", validation_loss)
             best_val_loss = validation_loss
-            model_path = f"models/saved_weights/{model_config['name']}.pth"
             torch.save(model.state_dict(), model_path)
 
             # also save a text file with the validation loss
@@ -306,6 +309,9 @@ def main(main_config):
             logger.info(
                 "\033[91mNot saving. Val. loss: %f\033[0m", validation_loss
             )
+
+            # load the best model
+            model.load_state_dict(torch.load(model_path, weights_only=True))
 
 
 if __name__ == "__main__":

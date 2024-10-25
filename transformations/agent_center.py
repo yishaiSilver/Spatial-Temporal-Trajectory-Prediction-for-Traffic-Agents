@@ -8,6 +8,7 @@ transformation to the given batch data.
 import numpy as np
 import torch
 
+from utils.logger_config import logger
 
 def get_rotation_matrix(positions):
     """
@@ -63,9 +64,16 @@ def apply(datum):
 
     # get the input and output data
     positions_in = np.array(datum["p_in"])
+    if "p_out" not in datum:
+        datum["p_out"] = np.zeros_like(positions_in)
     positions_out = np.array(datum["p_out"])
 
+    # save the final positions for inverse purposes
+    final_known = positions_in[agent_index, -1]
+
     velocities_in = np.array(datum["v_in"])
+    if "v_out" not in datum:
+        datum["v_out"] = np.zeros_like(velocities_in)
     velocities_out = np.array(datum["v_out"])
 
     lane_positions = np.array(datum["lane"])
@@ -85,9 +93,12 @@ def apply(datum):
 
     # create the rotation transform (key difference: only one needed)
     rotation_transforms = get_rotation_matrix(positions_in[agent_index])
+    # rotation_transforms = np.eye(2)
     positions = positions @ rotation_transforms
     lane_positions = lane_positions @ rotation_transforms
     lane_norms = lane_norms @ rotation_transforms
+
+    # print(target_positions.shape)
 
     # set the agent indices to be a displacement from ts to ts
     offsets = np.diff(target_positions, axis=0)
@@ -115,7 +126,7 @@ def apply(datum):
     rotation_transforms_inv = np.linalg.inv(rotation_transforms)
 
     metadata = {
-        "target_offset": target_positions,
+        "final_known": final_known,
         "rotation_transforms": rotation_transforms_inv,
     }
 
@@ -142,38 +153,34 @@ def inverse(predictions, metadata):
     # IMPORTANT: inputs are batched
     batch_size = predictions.shape[0]
 
+    # print(predictions.shape)
+
     # cumsum along the time dimension
     predictions = torch.cumsum(predictions, axis=1)
 
-    # get the translation and rotation matrices
-    target_positions = [
-        metadata[i]["target_offset"][18] for i in range(batch_size)
-    ]
-    rotation_transforms = [
+    # # get the translation and rotation matrices
+    final_known = torch.tensor(np.array([
+        metadata[i]["final_known"] for i in range(batch_size)
+    ]), dtype=torch.float32)
+    rotation_transforms = torch.tensor(np.array([
         metadata[i]["rotation_transforms"] for i in range(batch_size)
-    ]
+    ]), dtype=torch.float32)
 
-    # convert to numpy
-    target_positions = np.array(target_positions)
-    rotation_transforms = np.array(rotation_transforms)
-
-    # convert to tensors
-    target_positions = torch.tensor(target_positions, dtype=torch.float32)
-    rotation_transforms = torch.tensor(rotation_transforms, dtype=torch.float32)
-
-    # apply to all timestamps (batch, timestamp, 2)
-    target_positions = target_positions.unsqueeze(1)
-
-    # put on device
+    # # put on device
     device = predictions.device
-    target_positions = target_positions.to(device)
+    final_known = final_known.to(device)
     rotation_transforms = rotation_transforms.to(device)
 
     # apply the inverse transformations
-    # (30, 2) @ (2, 2) -> (30, 2)
+    # (b, 30, 2) @ (b, 2, 2) -> (b, 30, 2)
     predictions = predictions @ rotation_transforms
 
-    # (30, 2) + (2) -> (30, 2)
-    predictions = predictions + target_positions
+    # print(predictions.shape)
+    # print(final_known.shape)
+
+    # print(predictions)
+
+    # # (b, 30, 2) + (b, 2) -> (b, 30, 2)
+    predictions = predictions + final_known.unsqueeze(1)
 
     return predictions

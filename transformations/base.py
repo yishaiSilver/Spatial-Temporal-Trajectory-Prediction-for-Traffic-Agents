@@ -3,7 +3,7 @@
 # import torchvision.transforms as T
 
 
-import transformations.agent_centered_transformations as AgentCenter
+import transformations.agent_center as AgentCenter
 import transformations.random_noise as RandomNoise
 from transformations.model_preprocessing.pre_simple_mlp import preSimpleMLP
 from transformations.model_preprocessing.pre_simple_rnn import preSimpleRNN

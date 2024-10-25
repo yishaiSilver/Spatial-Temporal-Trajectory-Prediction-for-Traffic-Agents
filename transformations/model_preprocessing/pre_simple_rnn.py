@@ -67,6 +67,7 @@ class preSimpleRNN:
 
             inputs[1] = (lanes[0], last_lane[0])
 
+        metadata["scene_id"] = datum["scene_idx"]
 
         return inputs, labels, correction, metadata
 

@@ -138,13 +138,15 @@ def create_data_loader(model_config, data_config, train=True):
 
     if train:
         data_path = computer_specific["train_path"]
+        train_val_split = computer_specific["train_val_split"]
     else:
         data_path = computer_specific["val_path"]
+        train_val_split = 1.0
+        data_config["experimenting"] = 0
 
     # extract params
     batch_size = computer_specific["batch_size"]
     num_workers = computer_specific["num_workers"]
-    train_val_split = computer_specific["train_val_split"]
 
     # create the transformation function
     transform_function = BaseTransformation(model_config, data_config)

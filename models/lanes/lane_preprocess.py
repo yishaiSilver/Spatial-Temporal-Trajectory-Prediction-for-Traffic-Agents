@@ -9,6 +9,7 @@ import numpy as np
 from models.lanes.angle_filter import angle_filter
 from models.lanes.rear_filter import rear_filter
 from models.lanes.distance_filter import distance_filter_and_pad
+import multiprocessing as mp
 
 # from utils.logger_config import logger
 
@@ -115,9 +116,9 @@ class LanePreprocess:
         # considered. Only do it at the beginning, when lanes
         # don't have a timestep dimension
         if len(lanes[0].shape) == 2:
-            lanes = angle_filter(lanes)
+            # lanes = angle_filter(lanes)
 
-            lanes = rear_filter(lanes)
+            # lanes = rear_filter(lanes)
 
             # add a timestep dimension to the lanes:
             # list of batches x timesteps x lanes x dims
