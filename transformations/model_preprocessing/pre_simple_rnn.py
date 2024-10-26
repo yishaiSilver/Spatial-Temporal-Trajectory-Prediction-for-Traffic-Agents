@@ -25,7 +25,8 @@ class preSimpleRNN:
         features = data_config["features"]
         # feat_agent_positions = features["p_in"]
         # feat_agent_velocities = features["v_in"]
-        feat_lanes = features["lane"]
+        lane_information = features["lane"]
+        num_lanes = lane_information["num_lanes"]
         # feat_positional_embeddings = features["positional_embeddings"]
 
         # get the index of the target agent
@@ -50,7 +51,7 @@ class preSimpleRNN:
 
         # logger.debug(f"inputs: {inputs[0].shape}")
 
-        if feat_lanes:
+        if num_lanes > 0:
             lanes = np.array(datum["lane"])
             lane_norms = np.array(datum["lane_norm"])
 
@@ -64,7 +65,7 @@ class preSimpleRNN:
 
             # # preprocess the lanes
             #. FIXME add to config spec
-            lanes, last_lane = LanePreprocess(10)(x, lanes)
+            lanes, last_lane = LanePreprocess(num_lanes)(x, lanes)
 
             # logger.debug(f"lanes: {lanes.shape}")
 

@@ -52,7 +52,7 @@ data:
     lane:
       angle_filter: True # change to angle
       rear_filter: -5 # 1 for no rear filter
-      num_lanes: 20
+      num_lanes: 25
       embedding_size: 4
       positional_embeddings: 0 # not used if embedding_size > 0
     

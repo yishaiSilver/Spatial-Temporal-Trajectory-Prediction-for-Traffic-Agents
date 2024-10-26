@@ -18,6 +18,8 @@ import numpy as np
 import yaml
 import tqdm
 
+from torchnet.meter import MovingAverageValueMeter
+
 import data_loader.data_loaders as data
 
 from models.base import BaseModel
@@ -98,6 +100,9 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
         None
     """
 
+    rmse_meter = MovingAverageValueMeter(COUNT_MOVING_AVERAGE)
+    ade_meter = MovingAverageValueMeter(COUNT_MOVING_AVERAGE)
+
     # load the best model if we're not on the first epoch
     if epoch != 0:
         model_path = f"models/saved_weights/{model_config['name']}.pth"
@@ -106,9 +111,6 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
     # model.train(True)
 
     device = model.device
-
-    moving_avg_sum = 0
-    moving_avg_losses = []
 
     iterator = tqdm.tqdm(
         data_loader,
@@ -156,22 +158,20 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
         optimizer.step()
 
         # now just business as usual
-        loss = loss_fn(predictions, labels).item()
+        rmse = np.sqrt(loss_fn(predictions, labels).item())
 
-        moving_avg_losses.append(loss)
-        moving_avg_sum += loss
-        if len(moving_avg_losses) > COUNT_MOVING_AVERAGE:
-            first_loss = moving_avg_losses.pop(0)
-            moving_avg_sum -= first_loss
 
-        moving_avg_mse = moving_avg_sum / len(moving_avg_losses)
-        moving_avg_rmse = np.sqrt(moving_avg_mse)
+        rmse_meter.add(rmse)
+        ade_meter.add(ade.item())
+
+        rmse = rmse_meter.value()[0]
+        ade = ade_meter.value()[0]
 
         iterator.set_postfix_str(
-            f"avg. RMSE={moving_avg_rmse:.5f}"
-        )  # tod easy optimize
+            f"avg. RMSE={rmse:.5f}, avg. ADE={ade:.5f}"
+        ) 
 
-        if np.isnan(moving_avg_rmse):
+        if np.isnan(rmse):
             logger.error("\033[91mNaN loss. Exiting.\033[0m")
             exit(1)
 
@@ -191,6 +191,8 @@ def validate_epoch(model, loss_fn, data_loader):
 
     # model.eval()
 
+    rmse_meter = MovingAverageValueMeter(COUNT_MOVING_AVERAGE)
+
     device = model.device
 
     val_loss = 0.0
@@ -199,9 +201,6 @@ def validate_epoch(model, loss_fn, data_loader):
         total=int(len(data_loader)),
         bar_format="{l_bar}{bar:50}{r_bar}{bar:-50b}",
     )
-
-    moving_avg_sum = 0
-    moving_avg_losses = []
 
     with torch.no_grad():
         for batch_data in iterator:
@@ -228,14 +227,11 @@ def validate_epoch(model, loss_fn, data_loader):
 
             val_loss += loss.item()
 
-            moving_avg_losses.append(loss.item())
-            moving_avg_sum += loss.item()
-            if len(moving_avg_losses) > COUNT_MOVING_AVERAGE:
-                first_loss = moving_avg_losses.pop(0)
-                moving_avg_sum -= first_loss
+            rmse = np.sqrt(loss.item())
 
-            moving_avg_mse = moving_avg_sum / len(moving_avg_losses)
-            moving_avg_rmse = np.sqrt(moving_avg_mse)
+            rmse_meter.add(rmse)
+
+            moving_avg_rmse = rmse_meter.value()[0]
 
             iterator.set_postfix_str(
                 f"avg. RMSE={moving_avg_rmse:.5f}"
@@ -284,7 +280,7 @@ def main(main_config):
     model_path = f"models/saved_weights/{model_config['name']}.pth"
     for epoch in range(num_epochs):
         # load the best model
-        model.load_state_dict(torch.load(model_path, weights_only=True))
+        # model.load_state_dict(torch.load(model_path, weights_only=True))
 
         logger.info("EPOCH %d", epoch)
 

@@ -10,6 +10,7 @@ from torch.autograd import Variable
 
 import numpy as np
 
+from utils.logger_config import logger
 
 
 class TNet(nn.Module):
@@ -92,6 +93,8 @@ class PointNet(nn.Module):
         initialization of pointnet.
         """
         super().__init__()
+
+        logger.debug(f"num_points: {num_points}")
 
         global_feature_dims = 128
         combination_size = (

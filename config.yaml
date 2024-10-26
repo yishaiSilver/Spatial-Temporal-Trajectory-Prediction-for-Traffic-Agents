@@ -85,7 +85,7 @@ data:
     lane:
       angle_filter: True # change to angle
       distance_filter: 10
-      num_lanes: 20
+      num_lanes: 25
       embedding_size: 4
       positional_embeddings: 0 # not used if embedding_size > 0
     
