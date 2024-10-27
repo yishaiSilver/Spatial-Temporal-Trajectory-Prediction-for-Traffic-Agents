@@ -81,12 +81,14 @@ data:
   coord_dims: 2
   input_timesteps: 19
   output_timesteps: 30
+  teacher_forcing_freq: 10
   features:
     lane:
       angle_filter: True # change to angle
       distance_filter: 10
-      num_lanes: 25
-      embedding_size: 4
+      min_y_filter: -5
+      num_points: 6
+      embedding_size: 256
       positional_embeddings: 0 # not used if embedding_size > 0
     
     # needs work

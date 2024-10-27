@@ -12,7 +12,7 @@ class LaneEncoder(nn.Module):
     A module that manages how the lanes get encoded.
     """
 
-    def __init__(self, num_points):
+    def __init__(self, lane_config):
         """
         Initializes the LaneEncoder module.
         """
@@ -20,9 +20,11 @@ class LaneEncoder(nn.Module):
 
         self.angle_filter = True
         self.distance_filter = True
-        self.output_size = 128
+        self.embedding_size = lane_config["embedding_size"]
 
         self.ortho_lambda = 0.001
+
+        num_points = lane_config["num_points"]
 
         # . TODO will eventually want to use some sort of network
         # to evaluate which lanes are important, but for now the general
@@ -30,7 +32,7 @@ class LaneEncoder(nn.Module):
 
         # . TODO possibly use zero padding to begin with for optimization
 
-        self.pointnet = PointNet(num_points, 4, self.output_size)  # 4 input dims
+        self.pointnet = PointNet(num_points, 4, self.embedding_size)  # 4 input dims
 
     def forward(self, x, lanes):
         """

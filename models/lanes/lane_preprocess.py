@@ -8,6 +8,7 @@ import numpy as np
 
 from models.lanes.rear_filter import rear_filter
 from models.lanes.distance_filter import distance_filter_and_pad
+from models.lanes.angle_filter import angle_filter
 
 # from utils.logger_config import logger
 
@@ -16,13 +17,14 @@ class LanePreprocess:
     A module that manages how the lanes get preprocessed.
     """
 
-    def __init__(self, num_points):
+    def __init__(self, lane_config):
         """
         Initializes the LanePreprocess module.
         """
         self.angle_filter = True
         self.distance_filter = True
-        self.num_points = num_points
+        self.num_points = lane_config["num_points"]
+        self.min_y_filter = lane_config["min_y_filter"]
 
     def add_timestep_dim(self, x, lanes):
         """
@@ -108,15 +110,15 @@ class LanePreprocess:
         """
 
         # filter out lanes in the rear
-        lanes = rear_filter(lanes)
+        lanes = rear_filter(lanes, self.min_y_filter)
 
         # since angle doesn't change, do it first to minimize other points
         # considered. Only do it at the beginning, when lanes
         # don't have a timestep dimension
         if len(lanes[0].shape) == 2:
-            # lanes = angle_filter(lanes)
+            lanes = angle_filter(lanes)
 
-            # lanes = rear_filter(lanes)
+            lanes = rear_filter(lanes, self.min_y_filter)
 
             # add a timestep dimension to the lanes:
             # list of batches x timesteps x lanes x dims

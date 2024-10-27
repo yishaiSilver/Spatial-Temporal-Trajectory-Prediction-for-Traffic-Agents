@@ -88,13 +88,11 @@ class PointNet(nn.Module):
     The PointNet backbone being used to encode the lanes.
     """
 
-    def __init__(self, num_points, input_dims=4, output_dims=64):
+    def __init__(self, num_points, input_dims=4, embedding_size=64):
         """
         initialization of pointnet.
         """
         super().__init__()
-
-        logger.debug(f"num_points: {num_points}")
 
         global_feature_dims = 128
         combination_size = (
@@ -123,7 +121,7 @@ class PointNet(nn.Module):
         # mlp for combining local and global features
         self.fc1 = nn.Linear(combination_size, 512)
         self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, output_dims)
+        self.fc3 = nn.Linear(256, embedding_size)
 
         torch.set_float32_matmul_precision("high")
 

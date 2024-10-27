@@ -49,7 +49,7 @@ class Seq2Seq(nn.Module):
         v_in = features["v_in"]  # v is same # of agents as p
         self.positional_embeddings = features["positional_embeddings"]
 
-        lane_information = features["lane"]
+        lane_config = features["lane"]
 
         input_size += p_in * coord_dims
         input_size += v_in * coord_dims
@@ -60,15 +60,14 @@ class Seq2Seq(nn.Module):
             self.positional_embeddings * 2 if self.positional_embeddings else 1
         )
 
-        num_points = lane_information["num_lanes"]
-        self.lane_preprocess = LanePreprocess(num_points=num_points)
-        self.lane_encoder = LaneEncoder(num_points=num_points)
+        self.lane_preprocess = LanePreprocess(lane_config)
+        self.lane_encoder = LaneEncoder(lane_config)
         self.lane_encoder.cuda()
 
-        input_size += self.lane_encoder.output_size
+        input_size += self.lane_encoder.embedding_size
 
         # . TODO: config
-        self.teacher_forcing_freq = 10
+        self.teacher_forcing_freq = data_config["teacher_forcing_freq"]
 
         # add the positional embeddings *if* they are being used
         # input_size *= positional_embeddings * 2 if positional_embeddings else 1

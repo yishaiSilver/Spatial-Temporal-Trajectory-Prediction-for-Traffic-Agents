@@ -17,7 +17,6 @@ from torch import nn
 import numpy as np
 import yaml
 import tqdm
-
 from torchnet.meter import MovingAverageValueMeter
 
 import data_loader.data_loaders as data
@@ -235,7 +234,7 @@ def validate_epoch(model, loss_fn, data_loader):
 
             iterator.set_postfix_str(
                 f"avg. RMSE={moving_avg_rmse:.5f}"
-            )  # tod easy optimize
+            )  # tod easy optimize20
 
             if np.isnan(moving_avg_rmse):
                 logger.error("\033[91mNaN loss. Exiting.\033[0m")
