@@ -42,6 +42,7 @@ class Seq2Seq(nn.Module):
         hidden_size = model_config["hidden_size"]
         num_layers = model_config["num_layers"]
         dropout = model_config["dropout"]
+        self.bidirectional = model_config["bidirectional"]
 
         # modify the input size in accordance with the inputs being used
         features = data_config["features"]
@@ -84,18 +85,20 @@ class Seq2Seq(nn.Module):
             dropout=dropout,
             batch_first=True,
             device=self.device,
+            bidirectional=self.bidirectional,
         )
 
+        decoder_hidden = hidden_size * 2 if self.bidirectional else hidden_size
         self.decoder_rnn = nn.GRU(
             input_size=input_size,
-            hidden_size=hidden_size,
+            hidden_size=decoder_hidden,
             num_layers=num_layers,
             dropout=dropout,
             batch_first=True,
             device=self.device,
         )
 
-        self.fc1 = nn.Linear(hidden_size, hidden_size * 2, device=self.device)
+        self.fc1 = nn.Linear(decoder_hidden, hidden_size * 2, device=self.device)
         self.fc2 = nn.Linear(
             hidden_size * 2, hidden_size * 3, device=self.device
         )
@@ -164,6 +167,15 @@ class Seq2Seq(nn.Module):
         hidden = None
         _, hidden = self.encoder_rnn(x, hidden)
 
+        if self.bidirectional:
+            # convert from bidirectional to unidirectional
+            hidden = hidden.view(
+                hidden.shape[0] // 2,
+                hidden.shape[1],
+                hidden.shape[2] * 2,
+            )
+
+
         # get the last position
         x = x[:, -1, :].unsqueeze(1)
 
@@ -201,12 +213,12 @@ class Seq2Seq(nn.Module):
             # add the output to the input, replacing the first element
             x_t = x_t.unsqueeze(1)
 
-            # get the positional embeddings
-            x_t = self.get_positional_embeddings(x_t)
-
             # now we need to update the lane information
             lanes, lanes_t = self.lane_preprocess(x_t, lanes_t)
             lane_embeddings, o_loss = self.lane_encoder(x_t, lanes)
+
+            # get the positional embeddings
+            x_t = self.get_positional_embeddings(x_t)
 
             # combine x and lane embeddings. Also add ortho loss
             x = torch.cat((x_t, lane_embeddings), dim=2)
@@ -220,3 +232,4 @@ class Seq2Seq(nn.Module):
         outputs = torch.stack(outputs, dim=1)
 
         return outputs, ortho_loss
+    

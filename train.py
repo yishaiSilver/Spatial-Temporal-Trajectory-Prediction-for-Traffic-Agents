@@ -168,9 +168,9 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
 
         iterator.set_postfix_str(
             f"avg. RMSE={rmse:.5f}, avg. ADE={ade:.5f}"
-        ) 
+        )
 
-        if np.isnan(rmse):
+        if torch.isnan(rmse):
             logger.error("\033[91mNaN loss. Exiting.\033[0m")
             exit(1)
 
@@ -236,7 +236,7 @@ def validate_epoch(model, loss_fn, data_loader):
                 f"avg. RMSE={moving_avg_rmse:.5f}"
             )  # tod easy optimize20
 
-            if np.isnan(moving_avg_rmse):
+            if torch.isnan(moving_avg_rmse):
                 logger.error("\033[91mNaN loss. Exiting.\033[0m")
                 exit(1)
 

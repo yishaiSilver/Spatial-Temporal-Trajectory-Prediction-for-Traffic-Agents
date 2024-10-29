@@ -118,8 +118,6 @@ class LanePreprocess:
         if len(lanes[0].shape) == 2:
             lanes = angle_filter(lanes)
 
-            lanes = rear_filter(lanes, self.min_y_filter)
-
             # add a timestep dimension to the lanes:
             # list of batches x timesteps x lanes x dims
             lanes = self.add_timestep_dim(x, lanes)
