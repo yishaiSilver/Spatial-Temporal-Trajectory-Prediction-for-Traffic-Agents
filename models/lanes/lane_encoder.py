@@ -5,7 +5,9 @@ A module used to generate encodings for a list of lanes.
 import torch.nn as nn
 
 from models.lanes.pointnet import PointNet
+from models.lanes.resnet import ResNet
 
+from utils.logger_config import logger
 
 class LaneEncoder(nn.Module):
     """
@@ -32,7 +34,9 @@ class LaneEncoder(nn.Module):
 
         # . TODO possibly use zero padding to begin with for optimization
 
-        self.pointnet = PointNet(num_points, 4, self.embedding_size)  # 4 input dims
+        # self.pointnet = PointNet(num_points, 4, self.embedding_size)  # 4 input dims
+
+        self.resnet = ResNet(self.embedding_size)
 
     def forward(self, x, lanes):
         """
@@ -49,9 +53,14 @@ class LaneEncoder(nn.Module):
                 batches x timesteps x encoded_dims
         """
 
+        # TODO improve the way per model reshaping is done
+
         # since lanes are irrelevant to time, just flatten them into batches
-        b, t, p, d = lanes.shape
-        lanes = lanes.view(b * t, d, p)  # reordering d and p
+        # b, t, p, d = lanes.shape
+        # lanes = lanes.view(b * t, d, p)  # reordering d and p
+
+        b, t, n, m, d = lanes.shape
+        lanes = lanes.view(b * t, n, m, d)
 
         if x.is_cuda:
             lanes = lanes.cuda()
@@ -59,8 +68,14 @@ class LaneEncoder(nn.Module):
         # track gradients only for the pointnet call
         lanes = lanes.detach()
 
+
+        logger.debug(lanes.shape)
+
+        embeddings = self.resnet(lanes)
+        ortho_loss = 0
+
         # get the embeddings
-        embeddings, ortho_loss = self.pointnet(lanes)
+        # embeddings, ortho_loss = self.pointnet(lanes)
 
         # convert back to batchsize x timesteps x embedddings
         embeddings = embeddings.view(b, t, -1)

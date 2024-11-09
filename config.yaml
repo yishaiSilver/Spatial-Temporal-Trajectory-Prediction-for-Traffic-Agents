@@ -42,7 +42,7 @@ num_epochs: 10
 model: 
   name: Seq2Seq
   device: cuda
-  hidden_size: 512
+  hidden_size: 1024
   num_layers: 4
   dropout: 0.1
   bidirectional: false # only the encoder is bidirectional
@@ -60,9 +60,9 @@ data:
   xps15:
     train_path: /media/ssilver/UbuntuShared/data/train
     val_path: /media/ssilver/UbuntuShared/data/val_in
-    batch_size: 64
+    batch_size: 32
     shuffle: true
-    num_workers: 10
+    num_workers: 12
     train_val_split: 0.9
   y520:
     train_path: ../train/train
@@ -85,12 +85,16 @@ data:
   teacher_forcing_freq: 10
   features:
     lane:
-      angle_filter: True # change to angle
-      distance_filter: 10
+      # PointNet:
+      angle_filter: False # change to angle
+      distance_filter: 100
       min_y_filter: -5
       num_points: 50
-      embedding_size: 256
+      embedding_size: 64
       positional_embeddings: 0 # not used if embedding_size > 0
+      # ResNet:
+
+
     
     # needs work
     # lane: 0 # needs work

@@ -9,8 +9,9 @@ import numpy as np
 from models.lanes.rear_filter import rear_filter
 from models.lanes.distance_filter import distance_filter_and_pad
 from models.lanes.angle_filter import angle_filter
+from models.lanes.generate_map_matrix import generate_map
 
-# from utils.logger_config import logger
+from utils.logger_config import logger
 
 class LanePreprocess:
     """
@@ -109,6 +110,8 @@ class LanePreprocess:
         padding them.
         """
 
+        # FIXME
+        # this should happen after lane shifting
         # filter out lanes in the rear
         lanes = rear_filter(lanes, self.min_y_filter)
 
@@ -139,5 +142,7 @@ class LanePreprocess:
         lanes = distance_filter_and_pad(
             lanes, self.num_points
         )
+
+        lanes = generate_map(lanes, 20, 0.5)
 
         return lanes, final_lanes

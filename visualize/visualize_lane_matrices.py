@@ -23,6 +23,7 @@ from models.lanes.generate_map_matrix import generate_numpy
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+from utils.logger_config import logger
 
 # open the config file
 with open("../config.yaml", "r", encoding="utf-8") as file:
@@ -32,7 +33,7 @@ with open("../config.yaml", "r", encoding="utf-8") as file:
 # get the configs
 data_config = config["data"]
 data_config["xps15"]["shuffle"] = False
-data_config["xps15"]["batch_size"] = 1
+# data_config["xps15"]["batch_size"] = 1
 data_config["xps15"]["num_workers"] = 1
 model_config = config["model"]
 
@@ -43,25 +44,23 @@ train_loader, val_loader = data.create_data_loader(
 
 inputs, _, _, _ = next(iter(train_loader))
 
-x, lanes_w_loss, neighbors, teacher_forcing = inputs
+x, lanes, neighbors, teacher_forcing = inputs
 
-# lanes_w_loss [(batch, ts, n, 2), ortho_loss]
-lanes = lanes_w_loss[0][0]
+lanes, lanes_final = lanes
 
-# single ts
+# lanes = generate_numpy(lanes, size=20, granularity=0.5)
+
+# # single ts
 def plot_ts(ts, lanes, ax):
     """
     Plots a single timestep on ax
     """
     ax.clear()
 
-    lane = lanes[ts]
-    map_matrix = generate_numpy(lane, size=20, granularity=0.5)
+    # map for batch 0 at ts
+    map_b_t = lanes[0, ts]
 
-    map_matrix = map_matrix[:, :, 0] + map_matrix[:, :, 1]
-
-    # round to 1
-    map_matrix = np.round(map_matrix)
+    map_matrix = map_b_t[0, :, :] + map_b_t[1, :, :]
 
     ax.imshow(map_matrix, origin='lower', vmin=0, vmax=1)
 
@@ -71,4 +70,4 @@ ani = animation.FuncAnimation(
     fig, plot_ts, frames=range(0, 19), fargs=(lanes, ax), interval=100
 )
 
-ani.save("test.gif", writer="pillow", fps=10)
+ani.save("lane_matrices.gif", writer="pillow", fps=10)

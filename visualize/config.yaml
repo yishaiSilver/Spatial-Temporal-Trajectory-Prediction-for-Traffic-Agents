@@ -23,26 +23,26 @@ data:
   xps15:
     train_path: /media/ssilver/UbuntuShared/data/train
     val_path: /media/ssilver/UbuntuShared/data/val_in
-    batch_size: 1
+    batch_size: 3
     shuffle: false
     num_workers: 1
     train_val_split: 0.0
   y520:
     train_path: ../train/train
     val_path: ../val_in/val_in
-    batch_size: 1
+    batch_size: 3
     shuffle: false
     num_workers: 1
     train_val_split: 0.0
   acer:
     train_path: ../train/train
     val_path: ../val_in/val_in
-    batch_size: 1
+    batch_size: 3
     shuffle: false
     num_workers: 1
     train_val_split: 0.0
 
-  experimenting: 1 # set to 0 for full datasets
+  experimenting: 0 # set to 0 for full datasets
 
   train_val_split: 1.0
 

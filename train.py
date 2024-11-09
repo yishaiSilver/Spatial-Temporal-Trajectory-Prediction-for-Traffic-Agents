@@ -83,6 +83,15 @@ def ade_loss(predictions, labels):
 
     return ade
 
+def l1_regularization(model, lambda_l1=0.01):
+    """
+    L1 regularization for the model.
+    """
+
+    l1_norm = sum(p.abs().sum() for p in model.parameters())
+    l1_norm *= lambda_l1
+
+    return l1_norm
 
 def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
     """
@@ -148,9 +157,10 @@ def train_epoch(epoch, model, optimizer, loss_fn, data_loader, model_config):
         # normal_loss = loss_fn(predictions, labels)
         ade = ade_loss(predictions, labels)
         fde = fde_loss(predictions, labels)
+        l1 = l1_regularization(model)
 
         # want to optimize for both the normal loss and the orthogonality loss
-        loss = ade + fde + ortho_loss
+        loss = ade + fde + ortho_loss + l1
 
         loss.backward()
 

@@ -88,6 +88,10 @@ class Seq2Seq(nn.Module):
             bidirectional=self.bidirectional,
         )
 
+        self.attention = nn.MultiheadAttention(
+            hidden_size, num_heads=1, dropout=dropout, device=self.device
+        )
+
         decoder_hidden = hidden_size * 2 if self.bidirectional else hidden_size
         self.decoder_rnn = nn.GRU(
             input_size=input_size,
@@ -154,6 +158,7 @@ class Seq2Seq(nn.Module):
         # to make better use of parallelism, we preprocess lanes belonging
         # to input timesteps as part of the transformation pipeline
         # therefore, we just unpack the lanes here
+        # lanes_t is the last set of non-padded/filtered lanes
         lanes, lanes_t = lanes
         lane_embeddings, ortho_loss = self.lane_encoder(x, lanes)
 
@@ -166,15 +171,6 @@ class Seq2Seq(nn.Module):
         # encode the input
         hidden = None
         _, hidden = self.encoder_rnn(x, hidden)
-
-        if self.bidirectional:
-            # convert from bidirectional to unidirectional
-            hidden = hidden.view(
-                hidden.shape[0] // 2,
-                hidden.shape[1],
-                hidden.shape[2] * 2,
-            )
-
 
         # get the last position
         x = x[:, -1, :].unsqueeze(1)
@@ -189,10 +185,6 @@ class Seq2Seq(nn.Module):
                 and t % self.teacher_forcing_freq == 0
             ):
                 tf = teacher_forcing[:, t, :].unsqueeze(1)
-
-                # . TODO add positional embeddings
-                # tf = self.get_positional_embeddings(tf)
-
                 x[:, :, :2] = tf
 
             # get the output
