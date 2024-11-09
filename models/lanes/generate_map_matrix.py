@@ -60,38 +60,25 @@ def generate_torch(lanes, size=10, granularity=0.5):
     batch_maps = []
 
     for batch in lanes:
-        time_maps = []
+        map_matrix = torch.zeros((2, map_size, map_size), device="cuda")
 
-        for lanes_t in batch:
-            # map_matrix = torch.zeros((2, map_size, map_size))
+        lanes_t = batch[0]
 
-            # # get the coordinates of the lanes
-            # for lane in lanes_t:
-            #     # extract and scale coordinates, then shift them
-            #     x = int((lane[0] * scale_factor) + half_size)
-            #     y = int((lane[1] * scale_factor) + half_size)
+        # get the coordinates of the lanes
+        coords = ((lanes_t[:, :2] * scale_factor) + half_size).long()
+        valid_mask = (coords[:, 0] >= 0) & (coords[:, 0] < map_size) & (coords[:, 1] >= 0) & (coords[:, 1] < map_size)
+        valid_coords = coords[valid_mask]
+        valid_lanes = lanes_t[valid_mask]
 
-            #     # check if the coordinates are within the map bounds
-            #     if 0 <= x < map_size and 0 <= y < map_size:
-            #         map_matrix[:, x, y] = lane[2:]
+        # fill the map matrix
+        map_matrix[:, valid_coords[:, 0], valid_coords[:, 1]] = valid_lanes[:, 2:].T
 
-            
-            map_matrix = torch.zeros((2, map_size, map_size), device="cuda")
+        # add the time dimention
+        map_matrix = map_matrix.unsqueeze(0)
 
-            # get the coordinates of the lanes
-            coords = ((lanes_t[:, :2] * scale_factor) + half_size).long()
-            valid_mask = (coords[:, 0] >= 0) & (coords[:, 0] < map_size) & (coords[:, 1] >= 0) & (coords[:, 1] < map_size)
-            valid_coords = coords[valid_mask]
-            valid_lanes = lanes_t[valid_mask]
+        batch_maps.append(map_matrix)
 
-            # fill the map matrix
-            map_matrix[:, valid_coords[:, 0], valid_coords[:, 1]] = valid_lanes[:, 2:].T
-
-            time_maps.append(map_matrix)
-
-        batch_maps.append(time_maps)
-
-    batch_maps = torch.stack([torch.stack(batch) for batch in batch_maps])
+    batch_maps = torch.stack(batch_maps)
 
     return batch_maps
     
