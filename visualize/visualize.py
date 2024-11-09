@@ -266,7 +266,8 @@ def get_prediction(model_cfg, data_cfg, idx):
 # INDEX = 500 # odd scene with lots of entities
 
 # indices = [100, 40000, 5, 500, 200, 1000, 20, 300, 500]
-indices = [100, 40000, 5, 500, 200, 1000]
+indices = [100, 40000, 5, 500, 2, 1]
+# indices = [100, 40000, 5, 500, 200, 1000]
 # indices = [201,202,203,204,205,206]
 # indices = [301,302,303,304,305,306]
 # indices = [401,402,403,404,405,406]
@@ -276,6 +277,7 @@ indices = [100, 40000, 5, 500, 200, 1000]
 # indices = [801,802,803,804,805,806]
 
 viz_scenes = [visualization_dataset[i] for i in indices]
-predictions = [get_prediction(model_config, data_config, i) for i in indices]
+# predictions = [get_prediction(model_config, data_config, i) for i in indices]
+predictions = [None for _ in indices]
 
 animate(viz_scenes, predictions, filename="animation.gif")

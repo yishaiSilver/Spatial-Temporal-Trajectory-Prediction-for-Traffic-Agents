@@ -63,7 +63,7 @@ def plot_ts(ts, lanes, ax):
     # round to 1
     map_matrix = np.round(map_matrix)
 
-    ax.imshow(map_matrix, origin='lower')
+    ax.imshow(map_matrix, origin='lower', vmin=0, vmax=1)
 
 fig, ax = plt.subplots(figsize=(7, 7))
 
