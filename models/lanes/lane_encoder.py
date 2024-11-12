@@ -4,7 +4,6 @@ A module used to generate encodings for a list of lanes.
 
 import torch.nn as nn
 
-from models.lanes.pointnet import PointNet
 from models.lanes.resnet import ResNet
 
 from utils.logger_config import logger
@@ -68,8 +67,7 @@ class LaneEncoder(nn.Module):
         # track gradients only for the pointnet call
         lanes = lanes.detach()
 
-
-        logger.debug(lanes.shape)
+        # logger.debug(lanes.shape)
 
         embeddings = self.resnet(lanes)
         ortho_loss = 0

@@ -10,12 +10,11 @@ from torch.autograd import Variable
 
 import numpy as np
 
-from utils.logger_config import logger
 
 
 class TNet(nn.Module):
     """
-    Code gotten from fxia22's pointnet.pytorch repository
+    Code inspired by fxia22's pointnet.pytorch repository
     """
 
     def __init__(self, k):

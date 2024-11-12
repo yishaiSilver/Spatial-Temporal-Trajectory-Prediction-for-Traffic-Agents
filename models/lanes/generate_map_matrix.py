@@ -5,7 +5,6 @@ A module to generate a map matrix/image from a list of lanes.
 import numpy as np
 import torch
 
-from utils.logger_config import logger
 
 def generate_numpy(lanes, size=10, granularity=0.5):
     """

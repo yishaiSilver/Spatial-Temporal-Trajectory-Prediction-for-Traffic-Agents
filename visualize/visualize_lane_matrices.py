@@ -4,26 +4,17 @@ Module used to display test information of matrices
 import sys
 sys.path.append("../")
 
-import os
 
 import yaml
-import tqdm
-import torch
-import numpy as np
 import data_loader.data_loaders as data
 
-from models.base import BaseModel
 
-import transformations.agent_center as AgentCenter
-from transformations.model_preprocessing.pre_simple_rnn import preSimpleRNN
 
-from models.lanes.generate_map_matrix import generate_numpy
 
 # convert from n x n x 2 to n x n and plot with matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-from utils.logger_config import logger
 
 # open the config file
 with open("../config.yaml", "r", encoding="utf-8") as file:

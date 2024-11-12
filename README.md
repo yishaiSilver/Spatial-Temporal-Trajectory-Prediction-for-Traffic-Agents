@@ -10,13 +10,21 @@ The most recent model implemented is a Seq2Seq model with a PointNet model used 
 
 ## Task List
 
+#### Data Engineering:
+- [x] Agent-Centered Transformations
+- [x] Orientation from start/end of input sequence
+- [ ] Orientation from displacements
+- [x] Lane Relevancy Metrics (Rear, Orientation Alignment, Distance, etc.)
+
 #### Backbones:
 - [x] MLP
+- [x] RNN
 - [x] Seq2Seq (LSTM, GRU, etc.)
 - [ ] Transformer
 - [ ] Graph Neural Network
 
 #### Spatial Encodings:
+- [x] Sinusoidal Positional Embeddings (MLP)
 - [x] PointNet
 - [ ] PointNet++
 - [ ] Graph Convolutional Network

@@ -59,25 +59,25 @@ def update_plot(timestep, scenes, axs, preds=None):
         lane_positions = scene["lane"] - total_offset
         lane_norms = scene["lane_norm"]
 
-        # get the lane norm angles
-        lane_angles = np.arctan2(lane_norms[:, 1], lane_norms[:, 0])
+        # # get the lane norm angles
+        # lane_angles = np.arctan2(lane_norms[:, 1], lane_norms[:, 0])
 
-        # get the indices of the lane angles greater than 0
-        lane_indices = np.where(lane_angles > 0)[0]
+        # # get the indices of the lane angles greater than 0
+        # lane_indices = np.where(lane_angles > 0)[0]
 
-        # filter out the lanes that are not in the correct direction
-        lane_positions = lane_positions[lane_indices]
-        lane_norms = lane_norms[lane_indices]
+        # # filter out the lanes that are not in the correct direction
+        # lane_positions = lane_positions[lane_indices]
+        # lane_norms = lane_norms[lane_indices]
 
-        positive_lanes = np.where(lane_positions[:, 1] > -5)[0]
-        lane_positions = lane_positions[positive_lanes]
-        lane_norms = lane_norms[positive_lanes]
+        # positive_lanes = np.where(lane_positions[:, 1] > -5)[0]
+        # lane_positions = lane_positions[positive_lanes]
+        # lane_norms = lane_norms[positive_lanes]
 
-        # order by distance to 0, 0
-        lane_distances = np.linalg.norm(lane_positions, axis=1)
-        lane_indices = np.argsort(lane_distances)[:20]
-        lane_positions = lane_positions[lane_indices]
-        lane_norms = lane_norms[lane_indices]
+        # # order by distance to 0, 0
+        # lane_distances = np.linalg.norm(lane_positions, axis=1)
+        # lane_indices = np.argsort(lane_distances)[:20]
+        # lane_positions = lane_positions[lane_indices]
+        # lane_norms = lane_norms[lane_indices]
 
         # Plot the lanes
         for lane_position, lane_norm in zip(lane_positions, lane_norms):

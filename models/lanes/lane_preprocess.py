@@ -11,7 +11,6 @@ from models.lanes.distance_filter import distance_filter_and_pad
 from models.lanes.angle_filter import angle_filter
 from models.lanes.generate_map_matrix import generate_map
 
-from utils.logger_config import logger
 
 class LanePreprocess:
     """
